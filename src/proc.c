@@ -8,6 +8,9 @@
 #include "spinlock.h"
 #include <stdint.h>
 
+// added
+int buf_log[10];
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
