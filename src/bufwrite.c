@@ -5,7 +5,8 @@
 #include "user.h"
 
 int main(int argc, char *argv[]) {
+  printf(2, "start logging...\n");
   bufwrite();
-  printf(2, "bufwrite completed!\n");
+  printf(2, "logging finished\n");
   exit();
 }

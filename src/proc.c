@@ -9,7 +9,9 @@
 #include <stdint.h>
 
 // added
-int buf_log[10];
+struct schedlog buf_log[LOGBUFSIZE];
+int flag_write_log = 0;
+int buf_cnt = 0;
 
 struct {
   struct spinlock lock;

@@ -409,11 +409,18 @@ int sys_pipe(void) {
 
 // added
 int sys_bufwrite(void) {
-  buf_log[0] = 33;
+  flag_write_log = 1;
   return 0;
 }
 
 // added
 int sys_bufread(void) {
-  return buf_log[0];
+  cprintf(
+      "time, pid, event name, prev pstate, next pstate, cpu from, cpu to\n");
+  for (int i = 0; i < LOGBUFSIZE; i++) {
+    cprintf("%d, %d, %d, %d, %d, %d, %d\n", buf_log[i].time, buf_log[i].pid,
+            buf_log[i].event_name, buf_log[i].prev_pstate,
+            buf_log[i].next_pstate, buf_log[i].cpu_from, buf_log[i].cpu_to);
+  }
+  return 0;
 }

@@ -59,4 +59,15 @@ struct proc {
 
 // added
 // why extern?
-extern int buf_log[10];
+struct schedlog {
+  int time;
+  int pid;
+  int event_name;
+  int prev_pstate;
+  int next_pstate;
+  int cpu_from;
+  int cpu_to;
+};
+extern struct schedlog buf_log[LOGBUFSIZE];
+extern int flag_write_log;
+extern int buf_cnt;
