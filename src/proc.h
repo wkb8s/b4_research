@@ -1,4 +1,5 @@
 // Per-CPU state
+#include <stdint.h>
 struct cpu {
   uchar apicid;              // Local APIC ID
   struct context *scheduler; // swtch() here to enter scheduler
@@ -59,8 +60,13 @@ struct proc {
 
 // added
 // why extern?
+struct clock {
+  unsigned int hi;
+  unsigned int lo;
+};
+
 struct schedlog {
-  int time;
+  struct clock clock;
   int pid;
   int event_name;
   int prev_pstate;
@@ -68,6 +74,6 @@ struct schedlog {
   int cpu_from;
   int cpu_to;
 };
+
 extern struct schedlog buf_log[LOGBUFSIZE];
-extern int flag_write_log;
-extern int buf_cnt;
+extern int buf_rest_size;

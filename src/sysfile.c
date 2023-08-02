@@ -408,19 +408,43 @@ int sys_pipe(void) {
 }
 
 // added
+char hex[8 + 1]; // last character is '\0'
+char *convert_to_hexa(unsigned int n) {
+  for (int i = 0; i < 8; i++) {
+    unsigned int digit = n % 16;
+    n /= 16;
+    if (digit < 10) {
+      hex[7 - i] = '0' + digit;
+    } else {
+      hex[7 - i] = 'A' + digit - 10;
+    }
+  }
+  hex[8] = '\0';
+
+  return hex;
+}
+
+// added
 int sys_bufwrite(void) {
-  flag_write_log = 1;
+  buf_rest_size = LOGBUFSIZE;
   return 0;
 }
 
 // added
 int sys_bufread(void) {
   cprintf(
-      "time, pid, event name, prev pstate, next pstate, cpu from, cpu to\n");
+      "clock, pid, event name, prev pstate, next pstate, cpu from, cpu to\n");
   for (int i = 0; i < LOGBUFSIZE; i++) {
-    cprintf("%d, %d, %d, %d, %d, %d, %d\n", buf_log[i].time, buf_log[i].pid,
-            buf_log[i].event_name, buf_log[i].prev_pstate,
-            buf_log[i].next_pstate, buf_log[i].cpu_from, buf_log[i].cpu_to);
+    // print clock
+    char *hi_hex = convert_to_hexa(buf_log[i].clock.hi);
+    cprintf("%s", hi_hex);
+    char *lo_hex = convert_to_hexa(buf_log[i].clock.lo);
+    cprintf("%s, ", lo_hex);
+
+    // print other elements
+    cprintf("%d, %d, %d, %d, %d, %d\n", buf_log[i].pid, buf_log[i].event_name,
+            buf_log[i].prev_pstate, buf_log[i].next_pstate, buf_log[i].cpu_from,
+            buf_log[i].cpu_to);
   }
   return 0;
 }

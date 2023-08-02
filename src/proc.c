@@ -6,12 +6,34 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include <stdint.h>
 
 // added
 struct schedlog buf_log[LOGBUFSIZE];
-int flag_write_log = 0;
-int buf_cnt = 0;
+int buf_rest_size = 0;
+
+// added
+// get clock
+inline struct clock rdtsc(void) {
+  __asm__ __volatile__("mfence");
+  unsigned int lo, hi;
+  struct clock c;
+  __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+  c.hi = hi;
+  c.lo = lo;
+  __asm__ __volatile__("mfence");
+  return c;
+}
+
+// added
+void writelog(void) {
+  if (buf_rest_size > 0) {
+    buf_log[LOGBUFSIZE - buf_rest_size].clock    = rdtsc();
+    buf_log[LOGBUFSIZE - buf_rest_size].pid      = 2;
+    buf_log[LOGBUFSIZE - buf_rest_size].cpu_from = cpuid();
+
+    buf_rest_size--;
+  }
+}
 
 struct {
   struct spinlock lock;
@@ -299,15 +321,6 @@ int wait(void) {
   }
 }
 
-// added
-static inline uint64_t rdtsc(void) {
-  __asm__ __volatile__("mfence");
-  unsigned int lo, hi;
-  __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
-  __asm__ __volatile__("mfence");
-  return ((uint64_t)hi << 32) | lo;
-}
-
 // PAGEBREAK: 42
 //  Per-CPU process scheduler.
 //  Each CPU calls scheduler() after setting itself up.
@@ -328,6 +341,8 @@ void scheduler(void) {
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    writelog();
 
     // added
     /* if (cnt < 100) { */

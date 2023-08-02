@@ -5,23 +5,12 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
-/* #include "printf.c" */
 #include "fcntl.h" // added
 
 static void startothers(void);
 static void mpmain(void) __attribute__((noreturn));
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
-
-//added
-void output() {
-  /* printf(1, "this is test\n"); // why cannot use it ??*/
-  /* int cpu_num = sizeof(cpus) / sizeof(struct cpu); */
-  /* for (int i = 0; i < cpu_num; i++) { */
-  /*   cprintf("  %d", i + 1); */
-  /* } */
-  /* cprintf("\n"); */
-}
 
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
@@ -44,7 +33,6 @@ int main(void) {
   startothers();                              // start other processors
   kinit2(P2V(4 * 1024 * 1024), P2V(PHYSTOP)); // must come after startothers()
   userinit();                                 // first user process
-  output();                                   // added
   mpmain();                                   // finish this processor's setup
 }
 
