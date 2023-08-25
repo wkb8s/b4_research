@@ -59,21 +59,44 @@ struct proc {
 //   expandable heap
 
 // added
-// why extern?
 struct clock {
   unsigned int hi;
   unsigned int lo;
 };
 
+enum events {
+  ALLOCPROC,
+  WAKEUP,
+  YIELD,
+  FORK,
+  TICK,
+  EXIT,
+  WAIT,
+  SLEEP,
+  ALLOCEXIT,
+  USERINIT,
+  KILL,
+  SWITCH
+};
+
 struct schedlog {
   struct clock clock;
   int pid;
+
+  // events
+  // 0:ALLOCPROC, 1:WAKEUP, 2:YIELD, 3:FORK, 4:TICK, 5:EXIT, 6:WAIT, 7:SLEEP,
+  // 8:ALLOCEXIT(?), 9:USERINIT(?), 10:KILL(?), 11:SWITCH
   int event_name;
+
+  // pstate
+  // any of 'enum procstate'
+  // 0:UNUSED, 1:EMBRYO, 2:SLEEPING, 3:RUNNABLE, 4:RUNNING, 5:ZOMBIE
   int prev_pstate;
   int next_pstate;
-  int cpu_from;
-  int cpu_to;
+  int cpu;
+  /* int cpu_to; */
 };
 
+// why extern?
 extern struct schedlog buf_log[LOGBUFSIZE];
 extern int buf_rest_size;

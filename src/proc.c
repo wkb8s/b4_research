@@ -14,25 +14,14 @@ int buf_rest_size = 0;
 // added
 // get clock
 inline struct clock rdtsc(void) {
-  __asm__ __volatile__("mfence");
+  /* __asm__ __volatile__("mfence"); */
   unsigned int lo, hi;
   struct clock c;
   __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
   c.hi = hi;
   c.lo = lo;
-  __asm__ __volatile__("mfence");
+  /* __asm__ __volatile__("mfence"); */
   return c;
-}
-
-// added
-void writelog(void) {
-  if (buf_rest_size > 0) {
-    buf_log[LOGBUFSIZE - buf_rest_size].clock    = rdtsc();
-    buf_log[LOGBUFSIZE - buf_rest_size].pid      = 2;
-    buf_log[LOGBUFSIZE - buf_rest_size].cpu_from = cpuid();
-
-    buf_rest_size--;
-  }
 }
 
 struct {
@@ -87,6 +76,25 @@ struct proc *myproc(void) {
   return p;
 }
 
+// added
+void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
+  if (buf_rest_size > 0) {
+    buf_log[LOGBUFSIZE - buf_rest_size].clock = rdtsc();
+
+    // not worked...
+    /* struct proc *curproc                            = myproc(); */
+    buf_log[LOGBUFSIZE - buf_rest_size].pid         = pid;
+    buf_log[LOGBUFSIZE - buf_rest_size].prev_pstate = prev_pstate;
+
+    buf_log[LOGBUFSIZE - buf_rest_size].event_name  = event_name;
+    buf_log[LOGBUFSIZE - buf_rest_size].next_pstate = next_pstate;
+    buf_log[LOGBUFSIZE - buf_rest_size].cpu         = cpuid();
+    /* buf_log[LOGBUFSIZE - buf_rest_size].cpu_to      = cpu_to; */
+
+    buf_rest_size--;
+  }
+}
+
 // PAGEBREAK: 32
 //  Look in the process table for an UNUSED proc.
 //  If found, change state to EMBRYO and initialize
@@ -106,13 +114,18 @@ static struct proc *allocproc(void) {
   return 0;
 
 found:
+  p->pid = nextpid++;
+  // added
+  writelog(p->pid, ALLOCPROC, p->state, EMBRYO);
   p->state = EMBRYO;
-  p->pid   = nextpid++;
 
   release(&ptable.lock);
 
   // Allocate kernel stack.
   if ((p->kstack = kalloc()) == 0) {
+    // added
+    // what is it mean??
+    writelog(p->pid, ALLOCEXIT, p->state, UNUSED);
     p->state = UNUSED;
     return 0;
   }
@@ -166,6 +179,8 @@ void userinit(void) {
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
 
+  // added
+  writelog(p->pid, USERINIT, p->state, RUNNABLE);
   p->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -228,6 +243,8 @@ int fork(void) {
 
   acquire(&ptable.lock);
 
+  // added
+  writelog(curproc->pid, FORK, curproc->state, RUNNABLE);
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -273,6 +290,9 @@ void exit(void) {
     }
   }
 
+  // added
+  writelog(curproc->pid, EXIT, curproc->state, ZOMBIE);
+
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -296,6 +316,10 @@ int wait(void) {
       havekids = 1;
       if (p->state == ZOMBIE) {
         // Found one.
+
+        // added
+        writelog(p->pid, WAIT, p->state, UNUSED);
+
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
@@ -342,40 +366,12 @@ void scheduler(void) {
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    writelog();
-
-    // added
-    /* if (cnt < 100) { */
-    /*   cprintf("Core%d: ", cpuid()); */
-    /*   for (int i = 0; i < NPROC; i++) { */
-    /*     switch (ptable.proc[i].state) { */
-    /*       case UNUSED: */
-    /*         cprintf("U"); */
-    /*         break; */
-    /*       case EMBRYO: */
-    /*         cprintf("E"); */
-    /*         break; */
-    /*       case SLEEPING: */
-    /*         cprintf("S"); */
-    /*         break; */
-    /*       case RUNNABLE: */
-    /*         cprintf("A"); */
-    /*         break; */
-    /*       case RUNNING: */
-    /*         cprintf("R"); */
-    /*         break; */
-    /*       case ZOMBIE: */
-    /*         cprintf("Z"); */
-    /*         break; */
-    /*     } */
-    /*   } */
-    /*   cprintf("\n"); */
-    /* } */
-    /* cnt++; */
-
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
       if (p->state != RUNNABLE)
         continue;
+
+      // added
+      writelog(p->pid, TICK, p->state, RUNNING);
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -387,8 +383,13 @@ void scheduler(void) {
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
+      // added
+      /* writelog(p->pid, SWITCH, p->state, p->state); */
+
       // Process is done running for now.
       // It should have changed its p->state before coming back.
+
+      // ???
       c->proc = 0;
     }
 
@@ -422,8 +423,15 @@ void sched(void) {
 
 // Give up the CPU for one scheduling round.
 void yield(void) {
+  struct proc *curproc = myproc();
+
   acquire(&ptable.lock); // DOC: yieldlock
+
+  // added
+  writelog(curproc->pid, YIELD, curproc->state, RUNNABLE);
+
   myproc()->state = RUNNABLE;
+
   sched();
   release(&ptable.lock);
 }
@@ -469,7 +477,11 @@ void sleep(void *chan, struct spinlock *lk) {
     release(lk);
   }
   // Go to sleep.
-  p->chan  = chan;
+  p->chan = chan;
+
+  // added
+  writelog(p->pid, SLEEP, p->state, SLEEPING);
+
   p->state = SLEEPING;
 
   sched();
@@ -491,8 +503,12 @@ static void wakeup1(void *chan) {
   struct proc *p;
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if (p->state == SLEEPING && p->chan == chan)
+    if (p->state == SLEEPING && p->chan == chan) {
+      // added
+      writelog(p->pid, WAKEUP, p->state, RUNNABLE);
+
       p->state = RUNNABLE;
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -513,8 +529,11 @@ int kill(int pid) {
     if (p->pid == pid) {
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if (p->state == SLEEPING)
+      if (p->state == SLEEPING) {
+        // added
+        writelog(p->pid, KILL, p->state, RUNNABLE);
         p->state = RUNNABLE;
+      }
       release(&ptable.lock);
       return 0;
     }

@@ -14,7 +14,15 @@
 
 ## 8/2
 - clock の出力を追加
+		+ rdtsc は返り値uint64_t でそのまま使えないので, 32 bit ずつ分ける
+		+ 32 bit ずつを10進数のフォーマットで print してしまうと値が狂うので, 16進数に変換して print する
 		+ 出力を見る感じ, クロックの下位 5bit が0っぽいんだけど, これはあっているのか(?)
+- scheduling event の出力を追加
+
+## 8/25
+- scheduling event を追加
+- cpu_from, cpu_to を cpu のみに
+- prev_pstate の出力をサポート
 
 # goal
 
@@ -30,5 +38,3 @@
 
 
 # task
-- cpu の1クロックあたりの時間を確認
-- uint64_t をなんとか cprintf する方法を探す
