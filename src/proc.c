@@ -125,7 +125,7 @@ found:
   if ((p->kstack = kalloc()) == 0) {
     // added
     // what is it mean??
-    writelog(p->pid, ALLOCEXIT, p->state, UNUSED);
+    /* writelog(p->pid, ALLOCEXIT, p->state, UNUSED); */
     p->state = UNUSED;
     return 0;
   }
@@ -180,7 +180,7 @@ void userinit(void) {
   acquire(&ptable.lock);
 
   // added
-  writelog(p->pid, USERINIT, p->state, RUNNABLE);
+  /* writelog(p->pid, USERINIT, p->state, RUNNABLE); */
   p->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -535,7 +535,7 @@ int kill(int pid) {
       // Wake process from sleep if necessary.
       if (p->state == SLEEPING) {
         // added
-        writelog(p->pid, KILL, p->state, RUNNABLE);
+        /* writelog(p->pid, KILL, p->state, RUNNABLE); */
         p->state = RUNNABLE;
       }
       release(&ptable.lock);
