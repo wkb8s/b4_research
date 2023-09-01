@@ -24,6 +24,10 @@
 - cpu_from, cpu_to を cpu のみに
 - prev_pstate の出力をサポート
 
+## 9/1
+- プロセスの状態が不連続になる不具合を修正
+		+ fork() 内の writelog() の表記が原因だった
+
 # goal
 
 ## bufread, bufwrite システムコールの追加
@@ -31,10 +35,8 @@
 ### bufwrite
 - flag_write_log を true にする
 - 変数 buf が満杯になると, flag_write_log を false にする
-		+ スケジューラは flag_write_log が true の場合, コアの状態を観測しその情報を変数 buf に書き込み続ける
 
 ### bufread
 - 変数 buf を読み込み, 出力する
-
 
 # task

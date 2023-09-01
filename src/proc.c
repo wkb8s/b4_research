@@ -244,7 +244,8 @@ int fork(void) {
   acquire(&ptable.lock);
 
   // added
-  writelog(curproc->pid, FORK, curproc->state, RUNNABLE);
+  writelog(np->pid, FORK, np->state, RUNNABLE);
+  /* writelog(curproc->pid, FORK, curproc->state, RUNNABLE); */
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -370,14 +371,17 @@ void scheduler(void) {
       if (p->state != RUNNABLE)
         continue;
 
-      // added
-      writelog(p->pid, TICK, p->state, RUNNING);
+      /* // added */
+      /* writelog(p->pid, TICK, p->state, RUNNING); */
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       c->proc = p;
       switchuvm(p);
+
+      // added
+      writelog(p->pid, TICK, p->state, RUNNING);
       p->state = RUNNING;
 
       swtch(&(c->scheduler), p->context);

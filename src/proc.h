@@ -85,6 +85,8 @@ struct schedlog {
 
   // events
   // 0:ALLOCPROC, 1:WAKEUP, 2:YIELD, 3:FORK, 4:TICK, 5:EXIT, 6:WAIT, 7:SLEEP,
+  //
+  // unnecessary?
   // 8:ALLOCEXIT(?), 9:USERINIT(?), 10:KILL(?), 11:SWITCH
   int event_name;
 
