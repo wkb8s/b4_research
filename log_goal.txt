@@ -1,9 +1,0 @@
-time[ms], pid, event_name, prev_state, next_state, cpu_from, cpu_to
-
-...,
-
-100, 40, allocate, READY, RUNNING, 2, 2
-150, 38, i/o, RUNNING, BLOCKED, 3, 3
-210, 3, preemption, RUNNING, READY, 5, 7
-
-...,
