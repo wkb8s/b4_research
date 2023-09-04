@@ -83,6 +83,8 @@ struct schedlog {
   struct clock clock;
   int pid;
 
+  char name[16];
+
   // events
   // 0:ALLOCPROC, 1:WAKEUP, 2:YIELD, 3:FORK, 4:TICK, 5:EXIT, 6:WAIT, 7:SLEEP,
   //

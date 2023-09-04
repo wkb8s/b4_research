@@ -77,21 +77,35 @@ struct proc *myproc(void) {
 }
 
 // added
-void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
-  if (buf_rest_size > 0) {
-    buf_log[LOGBUFSIZE - buf_rest_size].clock = rdtsc();
+// from ulib.c
+int mystrcmp(const char *p, const char *q) {
+  while (*p && *p == *q)
+    p++, q++;
+  return (uchar)*p - (uchar)*q;
+}
 
-    // not worked...
-    /* struct proc *curproc                            = myproc(); */
-    buf_log[LOGBUFSIZE - buf_rest_size].pid         = pid;
-    buf_log[LOGBUFSIZE - buf_rest_size].prev_pstate = prev_pstate;
+// added
+void writelog(int pid, char *pname, char event_name, int prev_pstate,
+              int next_pstate) {
+  /* if (buf_rest_size > 0) { */
+  if (buf_rest_size > 0 && !mystrcmp(pname, "bufwrite")) {
+    buf_log[LOGBUFSIZE - buf_rest_size].clock = rdtsc();
+    buf_log[LOGBUFSIZE - buf_rest_size].pid   = pid;
+
+    for (int i = 0; i < 16; i++) {
+      buf_log[LOGBUFSIZE - buf_rest_size].name[i] = pname[i];
+    }
 
     buf_log[LOGBUFSIZE - buf_rest_size].event_name  = event_name;
+    buf_log[LOGBUFSIZE - buf_rest_size].prev_pstate = prev_pstate;
     buf_log[LOGBUFSIZE - buf_rest_size].next_pstate = next_pstate;
     buf_log[LOGBUFSIZE - buf_rest_size].cpu         = cpuid();
-    /* buf_log[LOGBUFSIZE - buf_rest_size].cpu_to      = cpu_to; */
 
     buf_rest_size--;
+
+    /* if (buf_rest_size == 0) { */
+    /*   cprintf("logging finished\n"); */
+    /* } */
   }
 }
 
@@ -116,7 +130,7 @@ static struct proc *allocproc(void) {
 found:
   p->pid = nextpid++;
   // added
-  writelog(p->pid, ALLOCPROC, p->state, EMBRYO);
+  writelog(p->pid, p->name, ALLOCPROC, p->state, EMBRYO);
   p->state = EMBRYO;
 
   release(&ptable.lock);
@@ -244,7 +258,7 @@ int fork(void) {
   acquire(&ptable.lock);
 
   // added
-  writelog(np->pid, FORK, np->state, RUNNABLE);
+  writelog(np->pid, np->name, FORK, np->state, RUNNABLE);
   /* writelog(curproc->pid, FORK, curproc->state, RUNNABLE); */
   np->state = RUNNABLE;
 
@@ -292,7 +306,7 @@ void exit(void) {
   }
 
   // added
-  writelog(curproc->pid, EXIT, curproc->state, ZOMBIE);
+  writelog(curproc->pid, curproc->name, EXIT, curproc->state, ZOMBIE);
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
@@ -319,7 +333,8 @@ int wait(void) {
         // Found one.
 
         // added
-        writelog(p->pid, WAIT, p->state, UNUSED);
+        // Is it OK to place here?
+        writelog(p->pid, p->name, WAIT, p->state, UNUSED);
 
         pid = p->pid;
         kfree(p->kstack);
@@ -381,7 +396,7 @@ void scheduler(void) {
       switchuvm(p);
 
       // added
-      writelog(p->pid, TICK, p->state, RUNNING);
+      writelog(p->pid, p->name, TICK, p->state, RUNNING);
       p->state = RUNNING;
 
       swtch(&(c->scheduler), p->context);
@@ -432,7 +447,7 @@ void yield(void) {
   acquire(&ptable.lock); // DOC: yieldlock
 
   // added
-  writelog(curproc->pid, YIELD, curproc->state, RUNNABLE);
+  writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE);
 
   myproc()->state = RUNNABLE;
 
@@ -484,7 +499,7 @@ void sleep(void *chan, struct spinlock *lk) {
   p->chan = chan;
 
   // added
-  writelog(p->pid, SLEEP, p->state, SLEEPING);
+  writelog(p->pid, p->name, SLEEP, p->state, SLEEPING);
 
   p->state = SLEEPING;
 
@@ -509,7 +524,7 @@ static void wakeup1(void *chan) {
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == SLEEPING && p->chan == chan) {
       // added
-      writelog(p->pid, WAKEUP, p->state, RUNNABLE);
+      writelog(p->pid, p->name, WAKEUP, p->state, RUNNABLE);
 
       p->state = RUNNABLE;
     }

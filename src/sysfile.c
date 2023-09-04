@@ -408,9 +408,7 @@ int sys_pipe(void) {
 }
 
 // added
-// !!! dangerous
-char hex[8 + 1]; // last character is '\0'
-char *convert_to_hexa(unsigned int n) {
+void convert_to_hexa(unsigned int n, char *hex) {
   for (int i = 0; i < 8; i++) {
     unsigned int digit = n % 16;
     n /= 16;
@@ -421,30 +419,53 @@ char *convert_to_hexa(unsigned int n) {
     }
   }
   hex[8] = '\0';
-
-  return hex;
 }
 
 // added
 int sys_bufwrite(void) {
-  buf_rest_size = LOGBUFSIZE;
+  /* buf_rest_size = LOGBUFSIZE; */
+
+  // wait until logging is finished
+
+  // not worked ...
+  /* for (int i = 0; i < LOGBUFSIZE; i++) */
+  /*   cprintf("logging now ...\n"); */
+  /* while (buf_rest_size > 0) */
+  /*   ; */
+
+  // write down processing contents here
+  /* for (int i = 0; i < LOGBUFSIZE; i++) { */
+  /*   char hi_hex[8 + 1], lo_hex[8 + 1]; */
+  /*   convert_to_hexa(buf_log[i].clock.hi, hi_hex); */
+  /*   convert_to_hexa(buf_log[i].clock.lo, lo_hex); */
+  /* } */
+
+  /* buf_rest_size = LOGBUFSIZE; */
+
+  /* cprintf("this is test\n"); */
+  /* cprintf("this is test\n"); */
+
   return 0;
 }
 
 // added
 int sys_bufread(void) {
-  cprintf(
-      "clock, pid, event name, prev pstate, next pstate, cpu\n");
+  cprintf("clock, pid, pname, event name, prev pstate, next pstate, cpu\n");
+
   for (int i = 0; i < LOGBUFSIZE; i++) {
     // print clock
-    char *hi_hex = convert_to_hexa(buf_log[i].clock.hi);
+    char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
+    convert_to_hexa(buf_log[i].clock.hi, hi_hex);
     cprintf("%s", hi_hex);
-    char *lo_hex = convert_to_hexa(buf_log[i].clock.lo);
+    convert_to_hexa(buf_log[i].clock.lo, lo_hex);
     cprintf("%s, ", lo_hex);
 
     // print other elements
-    cprintf("%d, %d, %d, %d, %d\n", buf_log[i].pid, buf_log[i].event_name,
-            buf_log[i].prev_pstate, buf_log[i].next_pstate, buf_log[i].cpu);
+    cprintf("%d, %s, %d, %d, %d, %d\n", buf_log[i].pid, buf_log[i].name,
+            buf_log[i].event_name, buf_log[i].prev_pstate,
+            buf_log[i].next_pstate, buf_log[i].cpu);
   }
+  cprintf("\n");
+
   return 0;
 }

@@ -150,26 +150,6 @@ int main(void) {
     }
   }
 
-  // added (fork bomb)
-  /* while (1) { */
-  /*   buf[0] = 'f'; */
-  /*   buf[1] = 'o'; */
-  /*   buf[2] = 'r'; */
-  /*   buf[3] = 'k'; */
-  /*   buf[4] = 't'; */
-  /*   buf[5] = 'e'; */
-  /*   buf[6] = 's'; */
-  /*   buf[7] = 't'; */
-  /*   buf[8] = '\n'; */
-  /*   if (fork1() == 0) */
-  /*     runcmd(parsecmd(buf)); */
-  /*   wait(); */
-  /* } */
-
-  /* } */
-  /* for (int i = 0; i < NPROC; i++) */
-  /* fork1(); */
-
   // Read and run input commands.
   while (getcmd(buf, sizeof(buf)) >= 0) {
     if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
@@ -178,6 +158,7 @@ int main(void) {
       if (chdir(buf + 3) < 0)
         printf(2, "cannot cd %s\n", buf + 3);
       continue;
+
     }
     if (fork1() == 0)
       runcmd(parsecmd(buf));
