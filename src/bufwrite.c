@@ -4,7 +4,8 @@
 #include "user.h"
 #include "fs.h"
 
-#define N 5
+#define N 100
+#define MAX 1000000000
 
 void forktest(void) {
   int n, pid;
@@ -39,24 +40,21 @@ void forktest(void) {
   printf(1, "fork test OK\n");
 }
 
-/* #define MAX 1000000 */
-/* void calculate_pi() { */
-/*   int x; */
-/*   for (int i = 0; i < MAX; i++) { */
-/*     for (int j = 0; j < MAX; j++) { */
-/*       for (int k = 0; k < MAX; k++) { */
-/*         x += 1000; */
-/*         x /= 10; */
-/*         x /= 10; */
-/*         x /= 10; */
-/*         x -= 1; */
-/*       } */
-/*     } */
-/*   } */
-/* } */
+void calculation() {
+  volatile int x = 0;
+  for (int i = 0; i < MAX; i++)
+    x++;
+}
 
 int main(int argc, char *argv[]) {
-  forktest();
-  /* calculate_pi(); */
+  /* fork(); */
+  /* fork(); */
+  /* fork(); */
+  /* forktest(); */
+
+  /* if (getpid() < 8) */
+    calculation();
+
+  /* sleep(300); */
   exit();
 }
