@@ -1,37 +1,66 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 import matplotlib.ticker as ticker
 
 # generate formatted csv file
 df = pd.read_csv('log/log.csv')
 
+# use relative clock
 df['clock'] = df['clock'].apply(lambda x: int(x, 16))
+df['clock'] = df['clock'] - df['clock'][0]
 
-df.replace({'event_name': {0: 'allocproc', 1: 'wakeup', 2: 'giveupCPU', 3: 'fork', 4: 'tick', 5: 'exit', 6: 'wait', 7: 'sleep'}, 'pstate_prev': {0: 'UNUSED', 1: 'EMBRYO', 2: 'SLEEPING', 3: 'RUNNABLE', 4: 'RUNNING', 5: 'ZOMBIE'}, 'pstate_next': {0: 'UNUSED', 1: 'EMBRYO', 2: 'SLEEPING', 3: 'RUNNABLE', 4: 'RUNNING', 5: 'ZOMBIE'}}).query('pstate_prev == "RUNNING" or pstate_next == "RUNNING"').loc[:,['clock', 'cpu', 'pid',]].to_csv('log/log_formatted.csv', index=False, header=False)
+df.query('pstate_prev == 3 or pstate_next == 3').loc[:,['clock', 'cpu', 'pid']].to_csv('log/log_formatted.csv', index=False, header=False)
 
-# make graph
+# draw graph
 data_set = np.loadtxt(
     fname="log/log_formatted.csv",
     dtype="int",
     delimiter=",",
 )
 
-colors = np.random.random_sample((50, 3))
+fig, ax = plt.subplots()
+# colors = np.random.random_sample((100, 3))
+colors = ["r", "r", "r", "r", "b", "g", "y", "m", "c", "k", "w"]
+labels = [] # for legend
+start_point = [] # store points pair
+sp_idx = [0] * 64
+idx = -1
 
 for data in data_set:
-    plt.scatter(data[0], data[1], c=colors[data[2]])
-    # plt.plot(data[0], data[1], c=colors[data[2]], '.')
+    flag = True
+    for sp in start_point:
+        # same pid
+        if (sp[2] == data[2]):
+            flag = False
 
-# x axis without offset
-# plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
+            # draw line when same cpu
+            if (sp[1] == data[1]):
+                lc = LineCollection([[[sp[0], sp[1]], [data[0], data[1]]]], colors=colors[data[2]], linewidth=3)
+                ax.add_collection(lc)
+
+            start_point[sp_idx[data[2]]] = data
+
+    # same pid is not found
+    if (flag):
+        start_point.append(data)
+        idx += 1
+        sp_idx[data[2]] = idx
+
+    # draw points
+    if (data[2] in labels):
+        ax.scatter(data[0], data[1], c=colors[data[2]])
+    else:
+        ax.scatter(data[0], data[1], c=colors[data[2]], label=data[2])
+        labels.append(data[2])
+
 # use integer in y axis
 plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
 
 # plt.title("Core State")
-plt.xlabel("clock", fontsize=11)
+plt.xlabel("elapsed clock", fontsize=11)
 plt.ylabel("CPU number", fontsize=11)
-# plt.legend()
+plt.legend(title="pid", fontsize=11)
 plt.grid()
-
 plt.show()
