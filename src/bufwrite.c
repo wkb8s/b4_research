@@ -3,16 +3,19 @@
 #include "stat.h"
 #include "user.h"
 #include "fs.h"
+#include "fcntl.h"
 
-#define N 100
-#define MAX 1000000000
+#define PROC_NUM 6
+
+char buf[8192];
+int stdout = 1;
 
 void forktest(void) {
   int n, pid;
 
   printf(1, "fork test\n");
 
-  for (n = 0; n < N; n++) {
+  for (n = 0; n < PROC_NUM; n++) {
     pid = fork();
     if (pid < 0)
       break;
@@ -20,8 +23,8 @@ void forktest(void) {
       exit();
   }
 
-  if (n == N) {
-    printf(1, "fork claimed to work N times!\n", N);
+  if (n == PROC_NUM) {
+    printf(1, "fork claimed to work N times!\n", PROC_NUM);
     exit();
   }
 
@@ -40,10 +43,223 @@ void forktest(void) {
   printf(1, "fork test OK\n");
 }
 
+void writetest(void) {
+  int fd;
+  int i;
+
+  printf(stdout, "small file test\n");
+  fd = open("small", O_CREATE | O_RDWR);
+  if (fd >= 0) {
+    printf(stdout, "creat small succeeded; ok\n");
+  } else {
+    printf(stdout, "error: creat small failed!\n");
+    exit();
+  }
+  for (i = 0; i < 100; i++) {
+    if (write(fd, "aaaaaaaaaa", 10) != 10) {
+      printf(stdout, "error: write aa %d new file failed\n", i);
+      exit();
+    }
+    if (write(fd, "bbbbbbbbbb", 10) != 10) {
+      printf(stdout, "error: write bb %d new file failed\n", i);
+      exit();
+    }
+  }
+  printf(stdout, "writes ok\n");
+  close(fd);
+  fd = open("small", O_RDONLY);
+  if (fd >= 0) {
+    printf(stdout, "open small succeeded ok\n");
+  } else {
+    printf(stdout, "error: open small failed!\n");
+    exit();
+  }
+  i = read(fd, buf, 2000);
+  if (i == 2000) {
+    printf(stdout, "read succeeded ok\n");
+  } else {
+    printf(stdout, "read failed\n");
+    exit();
+  }
+  close(fd);
+
+  if (unlink("small") < 0) {
+    printf(stdout, "unlink small failed\n");
+    exit();
+  }
+  printf(stdout, "small file test ok\n");
+}
+
+void writetest1(void) {
+  int i, fd, n;
+
+  printf(stdout, "big files test\n");
+
+  fd = open("big", O_CREATE | O_RDWR);
+  if (fd < 0) {
+    printf(stdout, "error: creat big failed!\n");
+    exit();
+  }
+
+  for (i = 0; i < MAXFILE; i++) {
+    ((int *)buf)[0] = i;
+    if (write(fd, buf, 512) != 512) {
+      printf(stdout, "error: write big file failed\n", i);
+      exit();
+    }
+  }
+
+  close(fd);
+
+  fd = open("big", O_RDONLY);
+  if (fd < 0) {
+    printf(stdout, "error: open big failed!\n");
+    exit();
+  }
+
+  n = 0;
+  for (;;) {
+    i = read(fd, buf, 512);
+    if (i == 0) {
+      if (n == MAXFILE - 1) {
+        printf(stdout, "read only %d blocks from big", n);
+        exit();
+      }
+      break;
+    } else if (i != 512) {
+      printf(stdout, "read failed %d\n", i);
+      exit();
+    }
+    if (((int *)buf)[0] != n) {
+      printf(stdout, "read content of block %d is %d\n", n, ((int *)buf)[0]);
+      exit();
+    }
+    n++;
+  }
+  close(fd);
+  if (unlink("big") < 0) {
+    printf(stdout, "unlink big failed\n");
+    exit();
+  }
+  printf(stdout, "big files ok\n");
+}
+
+// NFILE is up to 5
+#define NFILE 5
+#define MAX 1000000000
+
 void calculation() {
   volatile int x = 0;
   for (int i = 0; i < MAX; i++)
     x++;
+}
+
+// four processes write different files at the same
+// time, to test block allocation.
+void fourfiles(void) {
+  int fd, pid, i, n, pi;
+  char *names[] = {"f0", "f1", "f2", "f3", "f4"};
+  char *fname;
+
+  printf(1, "fourfiles test\n");
+
+  for (pi = 0; pi < NFILE; pi++) {
+    fname = names[pi];
+    unlink(fname);
+
+    pid = fork();
+    if (pid < 0) {
+      printf(1, "fork failed\n");
+      exit();
+    }
+
+    if (pid == 0) {
+      if (getpid() < 6) {
+        calculation();
+
+      } else {
+        fd = open(fname, O_CREATE | O_RDWR);
+        if (fd < 0) {
+          printf(1, "create failed\n");
+          exit();
+        }
+
+        memset(buf, '0' + pi, 512);
+        for (i = 0; i < 12; i++) {
+          if ((n = write(fd, buf, 500)) != 500) {
+            printf(1, "write failed %d\n", n);
+            exit();
+          }
+        }
+      }
+
+      exit();
+    }
+  }
+
+  /* for (pi = 0; pi < NFILE; pi++) { */
+  /*   wait(); */
+  /* } */
+
+  /* int j, total; */
+  /* for (i = 0; i < 2; i++) { */
+  /*   fname = names[i]; */
+  /*   fd    = open(fname, 0); */
+  /*   total = 0; */
+  /*   while ((n = read(fd, buf, sizeof(buf))) > 0) { */
+  /*     for (j = 0; j < n; j++) { */
+  /*       if (buf[j] != '0' + i) { */
+  /*         printf(1, "wrong char\n"); */
+  /*         exit(); */
+  /*       } */
+  /*     } */
+  /*     total += n; */
+  /*   } */
+  /*   close(fd); */
+  /*   if (total != 12 * 500) { */
+  /*     printf(1, "wrong length %d\n", total); */
+  /*     exit(); */
+  /*   } */
+  /*   unlink(fname); */
+  /* } */
+
+  printf(1, "fourfiles ok\n");
+}
+
+void mix(void) {
+  int fd, pid, i, n, pi;
+  char *names[] = {"f0", "f1", "f2", "f3"};
+  char *fname;
+
+  printf(1, "fourfiles test\n");
+
+  for (pi = 0; pi < NFILE; pi++) {
+    fname = names[pi];
+    unlink(fname);
+
+    pid = fork();
+    if (pid < 0) {
+      printf(1, "fork failed\n");
+      exit();
+    }
+
+    if (pid == 0) {
+      fd = open(fname, O_CREATE | O_RDWR);
+      if (fd < 0) {
+        printf(1, "create failed\n");
+        exit();
+      }
+
+      memset(buf, '0' + pi, 512);
+      for (i = 0; i < 12; i++) {
+        if ((n = write(fd, buf, 500)) != 500) {
+          printf(1, "write failed %d\n", n);
+          exit();
+        }
+      }
+      exit();
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -51,9 +267,12 @@ int main(int argc, char *argv[]) {
   /* fork(); */
   /* fork(); */
   /* forktest(); */
+  /* writetest(); */
+  /* writetest1(); */
+  fourfiles();
 
-  /* if (getpid() < 8) */
-    calculation();
+  /* if (getpid() < 3 + PROC_NUM) */
+  /*   calculation(); */
 
   /* sleep(300); */
   exit();
