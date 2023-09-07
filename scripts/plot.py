@@ -65,16 +65,21 @@ for ep in data_set: # ep : end_point
         idx += 1
         sp_idx[pid] = idx
 
-    # draw points
+    # draw points (invisible but necessary to draw lines)
     if (pid in labels):
-        ax.scatter(ep[0], ep[1], c=colors[pid], s=100, marker="|")
+        ax.scatter(ep[0], ep[1], c=colors[pid], s=100, alpha=0.0)
     else:
-        ax.scatter(ep[0], ep[1], c=colors[pid], label=pid, s=100, marker="|")
+        ax.scatter(ep[0], ep[1], c=colors[pid], label=pid, s=100, alpha=0.0)
         labels.append(pid)
+
+# set alpha = 1.0 in legend
+leg = ax.legend(title="pid", title_fontsize=11)
+for leha in leg.legend_handles:
+    leha.set_alpha(1.0)
 
 plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True)) # use integer in y axis
 plt.xlabel("elapsed clock", fontsize=11)
 plt.ylabel("CPU number", fontsize=11)
-plt.legend(title="pid", fontsize=11)
+# plt.legend(title="pid", fontsize=11)
 plt.grid()
 plt.show()
