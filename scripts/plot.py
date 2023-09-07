@@ -7,11 +7,15 @@ import matplotlib.ticker as ticker
 # generate formatted csv file
 df = pd.read_csv('log/log.csv')
 
-# use relative clock
+# use decimal relative clock
 df['clock'] = df['clock'].apply(lambda x: int(x, 16))
 df['clock'] = df['clock'] - df['clock'][0]
 
-df.query('pstate_prev == 3 or pstate_next == 3').loc[:,['clock', 'cpu', 'pid']].to_csv('log/log_formatted.csv', index=False, header=False)
+# filter unnecessary info
+# extract RUNNING info
+df.query('pstate_prev == 4 or pstate_next == 4') \
+    .loc[:,['clock', 'cpu', 'pid']] \
+    .to_csv('log/log_formatted.csv', index=False, header=False)
 
 # draw graph
 data_set = np.loadtxt(
@@ -22,43 +26,53 @@ data_set = np.loadtxt(
 
 fig, ax = plt.subplots()
 # colors = np.random.random_sample((100, 3))
-colors = ["r", "r", "r", "r", "b", "g", "y", "m", "c", "k", "w"]
+colors = ['#ffffff', '#ffffff', '#ffffff', '#ff0000', \
+          '#008000', '#0000ff', '#ffd700', '#ff69b4', \
+          '#800080', '#808080', '#90ee90', '#8b4513', \
+          '#e9967a', '#008080', '#ff00ff', '#556b2f', ]
 labels = [] # for legend
-start_point = [] # store points pair
-sp_idx = [0] * 64
+start_point = [] # start points of line
+sp_idx = [0] * 64 # index of start point
+cnt_samecpu = [0] * 64 # number of points in same CPU
 idx = -1
 
-for data in data_set:
+# seek end point of line
+for ep in data_set: # ep : end_point
+    pid = ep[2]
     flag = True
     for sp in start_point:
         # same pid
-        if (sp[2] == data[2]):
+        if (sp[2] == pid):
             flag = False
 
-            # draw line when same cpu
-            if (sp[1] == data[1]):
-                lc = LineCollection([[[sp[0], sp[1]], [data[0], data[1]]]], colors=colors[data[2]], linewidth=3)
-                ax.add_collection(lc)
+            # same cpu
+            if (sp[1] == ep[1]):
+                cnt_samecpu[pid] += 1
+                # draw line
+                if (cnt_samecpu[pid] % 2 == 0):
+                    lc = LineCollection([[[sp[0], sp[1]], [ep[0], ep[1]]]], \
+                                        colors=colors[pid], linewidth=10)
+                    ax.add_collection(lc)
+            # different cpu
+            else:
+                cnt_samecpu[pid] = 1
 
-            start_point[sp_idx[data[2]]] = data
+            start_point[sp_idx[pid]] = ep # update start_point
 
-    # same pid is not found
+    # same pid is not found in 'start_point'
     if (flag):
-        start_point.append(data)
+        start_point.append(ep)
         idx += 1
-        sp_idx[data[2]] = idx
+        sp_idx[pid] = idx
 
     # draw points
-    if (data[2] in labels):
-        ax.scatter(data[0], data[1], c=colors[data[2]])
+    if (pid in labels):
+        ax.scatter(ep[0], ep[1], c=colors[pid], s=100, marker="|")
     else:
-        ax.scatter(data[0], data[1], c=colors[data[2]], label=data[2])
-        labels.append(data[2])
+        ax.scatter(ep[0], ep[1], c=colors[pid], label=pid, s=100, marker="|")
+        labels.append(pid)
 
-# use integer in y axis
-plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
-
-# plt.title("Core State")
+plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True)) # use integer in y axis
 plt.xlabel("elapsed clock", fontsize=11)
 plt.ylabel("CPU number", fontsize=11)
 plt.legend(title="pid", fontsize=11)
