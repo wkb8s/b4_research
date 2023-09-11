@@ -1,3 +1,4 @@
+import sys
 import shutil
 import numpy as np
 import pandas as pd
@@ -11,20 +12,16 @@ idx = -1
 labels = [] # for legend
 start_point = [] # start points of line
 sp_idx = [0] * NPROC # index of start point
-cnt_samecpu = [0] * NPROC # number of points in same CPU
+cnt_samecpu = [1] * NPROC # number of points in same CPU
+fig, ax = plt.subplots()
 logfile_path = 'log/log.csv'
 colors = ['#ffffff', '#ffffff', '#ffffff', '#ff0000', \
           '#008000', '#0000ff', '#ffd700', '#ff69b4', \
           '#800080', '#808080', '#90ee90', '#8b4513', \
           '#e9967a', '#008080', '#ff00ff', '#556b2f', ]
 
-fig, ax = plt.subplots()
-dt = datetime.now()
-exe_time = dt.strftime("%Y_%m%d_%H%M")
-
 # import log
 df = pd.read_csv(logfile_path, header=0)
-shutil.copyfile(logfile_path, "log/" + exe_time + ".csv")
 
 # use decimal and elapsed clock
 df['clock'] = df['clock'].apply(lambda x: int(x, 16))
@@ -73,11 +70,28 @@ leg = ax.legend(title="pid", title_fontsize=11)
 for leha in leg.legend_handles:
     leha.set_alpha(1.0)
 
+    # # for debugging
+    # if (pid in labels):
+    #     ax.scatter(ep[0], ep[1], c=colors[pid])
+    # else:
+    #     ax.scatter(ep[0], ep[1], c=colors[pid], label=pid)
+    #     labels.append(pid)
+
 # use integer in y axis
-plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+plt.gca() \
+    .get_yaxis() \
+    .set_major_locator(ticker.MaxNLocator(integer=True))
+
+# save log and figure
+dt = datetime.now()
+exe_time = dt.strftime("%Y_%m%d_%H%M")
+args = sys.argv
+if (len(args) == 2):
+    if (args[1] == "-s"):
+        shutil.copyfile(logfile_path, "log/" + exe_time + ".csv")
+        plt.savefig("fig/" + exe_time + ".png")
 
 plt.xlabel("elapsed clock", fontsize=11)
 plt.ylabel("CPU number", fontsize=11)
 plt.grid()
-plt.savefig("fig/" + exe_time + ".png")
 plt.show()
