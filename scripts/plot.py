@@ -59,23 +59,23 @@ for ep in df.itertuples(name=None, index=False):
         sp_idx[pid] = idx
 
     # draw invisible end point
-    if (pid in labels):
-        ax.scatter(ep[0], ep[1], c=colors[pid], s=100, alpha=0.0)
-    else:
-        ax.scatter(ep[0], ep[1], c=colors[pid], label=pid, s=100, alpha=0.0)
-        labels.append(pid)
+    # if (pid in labels):
+    #     ax.scatter(ep[0], ep[1], c=colors[pid], s=100, alpha=0.0)
+    # else:
+    #     ax.scatter(ep[0], ep[1], c=colors[pid], label=pid, s=100, alpha=0.0)
+    #     labels.append(pid)
 
-# let legend visible
-leg = ax.legend(title="pid", title_fontsize=11)
-for leha in leg.legend_handles:
-    leha.set_alpha(1.0)
+# # let legend visible
+# leg = ax.legend(title="pid", title_fontsize=11)
+# for leha in leg.legend_handles:
+    # leha.set_alpha(1.0)
 
     # # for debugging
-    # if (pid in labels):
-    #     ax.scatter(ep[0], ep[1], c=colors[pid])
-    # else:
-    #     ax.scatter(ep[0], ep[1], c=colors[pid], label=pid)
-    #     labels.append(pid)
+    if (pid in labels):
+        ax.scatter(ep[0], ep[1], c=colors[pid])
+    else:
+        ax.scatter(ep[0], ep[1], c=colors[pid], label=pid)
+        labels.append(pid)
 
 # use integer in y axis
 plt.gca() \
