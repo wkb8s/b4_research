@@ -26,7 +26,7 @@ inline struct clock rdtsc(void) {
 
 struct {
   struct spinlock lock;
-  struct proc proc[NPROC]; // attention: not sorted by pid
+  struct proc proc[NPROC];
 } ptable;
 
 static struct proc *initproc;
@@ -129,10 +129,6 @@ static struct proc *allocproc(void) {
 
 found:
   p->pid = nextpid++;
-
-  // added
-  p->priority = MAX_PRIO;
-
   // added
   writelog(p->pid, p->name, ALLOCPROC, p->state, EMBRYO);
   p->state = EMBRYO;
@@ -365,19 +361,6 @@ int wait(void) {
   }
 }
 
-// added
-void boost_prio(void) {
-  struct proc *p;
-
-  acquire(&ptable.lock);
-
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    p->priority = MAX_PRIO;
-  }
-
-  release(&ptable.lock);
-}
-
 // PAGEBREAK: 42
 //  Per-CPU process scheduler.
 //  Each CPU calls scheduler() after setting itself up.
@@ -389,8 +372,8 @@ void boost_prio(void) {
 void scheduler(void) {
   struct proc *p;
   struct cpu *c = mycpu();
-  // ???
-  c->proc = 0;
+  c->proc       = 0;
+  /* int cnt       = 0; // added */
 
   for (;;) {
     // Enable interrupts on this processor.
@@ -399,54 +382,34 @@ void scheduler(void) {
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    // MLFQ-like scheduler
-    if (IS_MLFQ) {
-      int sched_idx = 0; // added
-      int is_found  = 0;
-      for (int search_prio = MAX_PRIO; search_prio >= 0; search_prio--) {
-        // search next process
-        for (int i = 0; i < NPROC; i++) {
-          p = &ptable.proc[sched_idx];
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->state != RUNNABLE)
+        continue;
 
-          is_found = 0;
-          if (p->state == RUNNABLE && p->priority == search_prio) {
-            is_found = 1;
-            c->proc  = p;
-            switchuvm(p);
-            writelog(p->pid, p->name, TICK, p->state, RUNNING);
-            p->state = RUNNING;
-            swtch(&(c->scheduler), p->context);
-            switchkvm(); // resume from here
-            c->proc = 0; // ???
-          } else {
-            if (sched_idx == NPROC - 1) {
-              sched_idx = 0;
-            } else {
-              sched_idx++;
-            }
-          }
-          if (is_found)
-            break;
-        }
-        if (is_found)
-          break;
-      }
-    }
+      /* // added */
+      /* writelog(p->pid, TICK, p->state, RUNNING); */
 
-    // default round robin scheduler
-    else {
-      for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-        if (p->state == RUNNABLE) {
-          c->proc = p;
-          switchuvm(p);
-          writelog(p->pid, p->name, TICK, p->state, RUNNING);
-          p->state = RUNNING;
-          swtch(&(c->scheduler), p->context);
-          // resume from here
-          switchkvm();
-          c->proc = 0; // ???
-        }
-      }
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      c->proc = p;
+      switchuvm(p);
+
+      // added
+      writelog(p->pid, p->name, TICK, p->state, RUNNING);
+      p->state = RUNNING;
+
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+
+      // added
+      /* writelog(p->pid, SWITCH, p->state, p->state); */
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+
+      // ???
+      c->proc = 0;
     }
 
     release(&ptable.lock);
@@ -482,10 +445,6 @@ void yield(void) {
   struct proc *curproc = myproc();
 
   acquire(&ptable.lock); // DOC: yieldlock
-
-  // decrease priority
-  if (IS_MLFQ && curproc->priority > 0)
-    curproc->priority--;
 
   // added
   writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE);
