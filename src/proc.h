@@ -50,6 +50,8 @@ struct proc {
   struct file *ofile[NOFILE]; // Open files
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
+
+  int priority; // added
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -79,6 +81,10 @@ enum events {
   SWITCH
 };
 
+#define IS_MLFQ 1
+#define IS_BOOST_PRIORITY 1
+#define MAX_PRIO 100
+
 struct schedlog {
   struct clock clock;
   int pid;
@@ -104,3 +110,6 @@ struct schedlog {
 // why extern?
 extern struct schedlog buf_log[LOGBUFSIZE];
 extern int buf_rest_size;
+
+// added
+extern int boost_cnt;

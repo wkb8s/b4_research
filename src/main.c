@@ -35,6 +35,7 @@ int main(void) {
   userinit();                                 // first user process
 
   buf_rest_size = LOGBUFSIZE; // added
+  boost_cnt = -1; // added
 
   mpmain(); // finish this processor's setup
 }

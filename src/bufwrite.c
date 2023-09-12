@@ -5,7 +5,9 @@
 #include "fs.h"
 #include "fcntl.h"
 
-#define PROC_NUM 6
+#define FORK_NUM 2
+#define CALC_NUM 1
+#define CALC_LOOP 100000000
 
 char buf[8192];
 int stdout = 1;
@@ -15,7 +17,7 @@ void forktest(void) {
 
   printf(1, "fork test\n");
 
-  for (n = 0; n < PROC_NUM; n++) {
+  for (n = 0; n < FORK_NUM; n++) {
     pid = fork();
     if (pid < 0)
       break;
@@ -23,8 +25,8 @@ void forktest(void) {
       exit();
   }
 
-  if (n == PROC_NUM) {
-    printf(1, "fork claimed to work N times!\n", PROC_NUM);
+  if (n == FORK_NUM) {
+    printf(1, "fork claimed to work N times!\n", FORK_NUM);
     exit();
   }
 
@@ -43,7 +45,7 @@ void forktest(void) {
   printf(1, "fork test OK\n");
 }
 
-void writetest(void) {
+void smallwrite(void) {
   int fd;
   int i;
 
@@ -90,7 +92,7 @@ void writetest(void) {
   printf(stdout, "small file test ok\n");
 }
 
-void writetest1(void) {
+void largewrite(void) {
   int i, fd, n;
 
   printf(stdout, "big files test\n");
@@ -144,136 +146,49 @@ void writetest1(void) {
   printf(stdout, "big files ok\n");
 }
 
-// NFILE is up to 5
-#define NFILE 5
-#define MAX 1000000000
-
 void calculation() {
   volatile int x = 0;
-  for (int i = 0; i < MAX; i++)
+  for (int i = 0; i < CALC_LOOP; i++)
     x++;
 }
 
-// four processes write different files at the same
-// time, to test block allocation.
-void fourfiles(void) {
-  int fd, pid, i, n, pi;
-  char *names[] = {"f0", "f1", "f2", "f3", "f4"};
-  char *fname;
+void calc_write_mix() {
+  int pid, pi;
 
-  printf(1, "fourfiles test\n");
-
-  for (pi = 0; pi < NFILE; pi++) {
-    fname = names[pi];
-    unlink(fname);
-
+  for (pi = 0; pi < FORK_NUM; pi++) {
     pid = fork();
     if (pid < 0) {
       printf(1, "fork failed\n");
       exit();
     }
 
+    // child
     if (pid == 0) {
-      if (getpid() < 6) {
+      // half processes execute calculation()
+      if (getpid() <= 3 + CALC_NUM) {
+        printf(1, "calculation() called\n");
         calculation();
-
-      } else {
-        fd = open(fname, O_CREATE | O_RDWR);
-        if (fd < 0) {
-          printf(1, "create failed\n");
-          exit();
-        }
-
-        memset(buf, '0' + pi, 512);
-        for (i = 0; i < 12; i++) {
-          if ((n = write(fd, buf, 500)) != 500) {
-            printf(1, "write failed %d\n", n);
-            exit();
-          }
-        }
       }
-
+      // the other processes execute write()
+      else {
+        printf(1, "writetest() called\n");
+        sleep(12);
+        calculation();
+        /* largewrite(); */
+        /* smallwrite(); */
+      }
       exit();
     }
   }
 
-  /* for (pi = 0; pi < NFILE; pi++) { */
-  /*   wait(); */
-  /* } */
-
-  /* int j, total; */
-  /* for (i = 0; i < 2; i++) { */
-  /*   fname = names[i]; */
-  /*   fd    = open(fname, 0); */
-  /*   total = 0; */
-  /*   while ((n = read(fd, buf, sizeof(buf))) > 0) { */
-  /*     for (j = 0; j < n; j++) { */
-  /*       if (buf[j] != '0' + i) { */
-  /*         printf(1, "wrong char\n"); */
-  /*         exit(); */
-  /*       } */
-  /*     } */
-  /*     total += n; */
-  /*   } */
-  /*   close(fd); */
-  /*   if (total != 12 * 500) { */
-  /*     printf(1, "wrong length %d\n", total); */
-  /*     exit(); */
-  /*   } */
-  /*   unlink(fname); */
-  /* } */
-
-  printf(1, "fourfiles ok\n");
-}
-
-void mix(void) {
-  int fd, pid, i, n, pi;
-  char *names[] = {"f0", "f1", "f2", "f3"};
-  char *fname;
-
-  printf(1, "fourfiles test\n");
-
-  for (pi = 0; pi < NFILE; pi++) {
-    fname = names[pi];
-    unlink(fname);
-
-    pid = fork();
-    if (pid < 0) {
-      printf(1, "fork failed\n");
-      exit();
-    }
-
-    if (pid == 0) {
-      fd = open(fname, O_CREATE | O_RDWR);
-      if (fd < 0) {
-        printf(1, "create failed\n");
-        exit();
-      }
-
-      memset(buf, '0' + pi, 512);
-      for (i = 0; i < 12; i++) {
-        if ((n = write(fd, buf, 500)) != 500) {
-          printf(1, "write failed %d\n", n);
-          exit();
-        }
-      }
-      exit();
-    }
+  // parent wait child
+  for (pi = 0; pi < FORK_NUM; pi++) {
+    wait();
   }
 }
 
 int main(int argc, char *argv[]) {
-  /* fork(); */
-  /* fork(); */
-  /* fork(); */
-  /* forktest(); */
-  /* writetest(); */
-  /* writetest1(); */
-  fourfiles();
+  calc_write_mix();
 
-  /* if (getpid() < 3 + PROC_NUM) */
-  /*   calculation(); */
-
-  /* sleep(300); */
   exit();
 }
