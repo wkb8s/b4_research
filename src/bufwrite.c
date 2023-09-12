@@ -7,7 +7,7 @@
 
 #define FORK_NUM 2
 #define CALC_NUM 1
-#define CALC_LOOP 10000000
+#define CALC_LOOP 100000000
 
 char buf[8192];
 int stdout = 1;
@@ -168,21 +168,13 @@ void calc_write_mix() {
       if (getpid() <= 3 + CALC_NUM) {
         printf(1, "calculation() called\n");
         calculation();
-        /* calculation(); */
-        /* calculation(); */
-        /* calculation(); */
-        /* calculation(); */
-        /* calculation(); */
       }
       // the other processes execute write()
       else {
         printf(1, "writetest() called\n");
-        /* sleep(6); */
-        /* calculation(); */
-        /* calculation(); */
-        /* calculation(); */
-        /* calculation(); */
-        largewrite();
+        sleep(12);
+        calculation();
+        /* largewrite(); */
         /* smallwrite(); */
       }
       exit();

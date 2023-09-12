@@ -365,6 +365,19 @@ int wait(void) {
   }
 }
 
+// added
+void boost_prio(void) {
+  struct proc *p;
+
+  acquire(&ptable.lock);
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    p->priority = MAX_PRIO;
+  }
+
+  release(&ptable.lock);
+}
+
 // PAGEBREAK: 42
 //  Per-CPU process scheduler.
 //  Each CPU calls scheduler() after setting itself up.

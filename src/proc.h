@@ -82,6 +82,7 @@ enum events {
 };
 
 #define IS_MLFQ 1
+#define IS_BOOST_PRIORITY 1
 #define MAX_PRIO 100
 
 struct schedlog {
@@ -109,3 +110,6 @@ struct schedlog {
 // why extern?
 extern struct schedlog buf_log[LOGBUFSIZE];
 extern int buf_rest_size;
+
+// added
+extern int boost_cnt;
