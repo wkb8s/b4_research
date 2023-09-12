@@ -95,3 +95,5 @@ bufwrite system call で記録されたログを print する
 + もしかしたら plot.py にまだ修正すべき点があるかもしれない
 
 ### 9/10
+- MLFQ-like scheduler が, 概ね想定通りの動作をすることを確認
++ CPU-intensive なプロセスAが動いていたとき, 途中から CPU-intensive なプロセスBが動きはじめると, プロセスA は starvation-like な動きをすることが確認できた
