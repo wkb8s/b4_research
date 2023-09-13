@@ -100,13 +100,10 @@ void trap(struct trapframe *tf) {
   // If interrupts were on while locks held, would need to check nlock.
   if (myproc() && myproc()->state == RUNNING &&
       tf->trapno == T_IRQ0 + IRQ_TIMER) {
-
-    // boost priority
-    // 1 in 5 times when interrupted by timer
-    boost_cnt++;
-    boost_cnt %= 5;
-    if (boost_cnt == 0 && IS_BOOST_PRIORITY) {
-     boost_prio();
+    // added
+    // priority boost
+    if (ticks % 10 == 0 && IS_BOOST_PRIORITY) {
+      boost_prio();
     }
 
     yield();

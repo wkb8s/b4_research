@@ -94,8 +94,12 @@ bufwrite system call で記録されたログを print する
 + 改良前と改良後で動作に違いが出るか確かめているが, うまく visualize できていない
 + もしかしたら plot.py にまだ修正すべき点があるかもしれない
 
-### 9/10
+### 9/12
 - MLFQ-like scheduler が, 概ね想定通りの動作をすることを確認
 + CPU-intensive なプロセスAが動いていたとき, 途中から CPU-intensive なプロセスBが動きはじめると, プロセスA は starvation-like な動きをすることが確認できた
 - Priority Boost を実装
 + 上に挙げた MLFQ-like scheduler の症状をほどほど改善できた
+
+### 9/13
+- Priority Boost を修正
++ 「time slice を 10 回使い切ったときに Boost」 → 「timer interrupt が 10 回起こった時に Boost」 に変更
