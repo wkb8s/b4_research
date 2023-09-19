@@ -424,6 +424,8 @@ void convert_to_hexa(unsigned int n, char *hex) {
 // added
 // unused
 int sys_bufwrite(void) {
+  /* yield(); */
+  /* printrunqueue(); */
   return 0;
 }
 

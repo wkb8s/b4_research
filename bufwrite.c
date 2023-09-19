@@ -5,9 +5,9 @@
 #include "fs.h"
 #include "fcntl.h"
 
-#define FORK_NUM 2
-#define CALC_NUM 1
-#define CALC_LOOP 100000000
+#define FORK_NUM 4
+#define CALC_NUM 2
+#define CALC_LOOP 100
 
 char buf[8192];
 int stdout = 1;
@@ -187,8 +187,51 @@ void calc_write_mix() {
   }
 }
 
+void runqueuetest() {
+  int pid, pi;
+
+  for (pi = 0; pi < FORK_NUM; pi++) {
+    pid = fork();
+    if (pid < 0) {
+      printf(1, "fork failed\n");
+      exit();
+    }
+
+    // child
+    if (pid == 0) {
+      calculation();
+      exit();
+    }
+
+    // parent wait child
+    for (pi = 0; pi < FORK_NUM; pi++)
+      wait();
+  }
+}
+
+void yieldrepeat(void) {
+  for (int i = 0; i < FORK_NUM; i++) {
+    // if child
+    if (fork() == 0) {
+      for (int j = 0; j < 10; j++) {
+        calculation();
+        bufwrite(); // need include yield() in sys_bufwrite()
+      }
+    }
+  }
+
+  for (int i = 0; i < FORK_NUM; i++) {
+    wait();
+  }
+}
+
 int main(int argc, char *argv[]) {
-  calc_write_mix();
+  /* yieldrepeat(); */
+  /* calc_write_mix(); */
+  /* fork(); */
+  /* fork(); */
+  /* bufwrite(); */
+  runqueuetest();
 
   exit();
 }

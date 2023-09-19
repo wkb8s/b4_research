@@ -244,9 +244,10 @@ qemu-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
-qemu-nox-gdb: fs.img xv6.img .gdbinit
+# for debugging
+qemu-nox-gdb: fs.img xv6.img
 	@echo "*** Now run 'gdb'." 1>&2
-	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
+	$(QEMU) -nographic $(QEMUOPTS) -S -s
 
 # CUT HERE
 # prepare dist for students
