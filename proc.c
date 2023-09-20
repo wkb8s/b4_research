@@ -101,21 +101,21 @@ struct proc head[MAX_CPU_NUM];
 
 void runqueueinit(void) {
   for (int i = 0; i < ncpu; i++) {
-    acquire(&rqtable.lock);
+    /* acquire(&rqtable.lock); */
     struct runqueue *rq = &rqtable.runqueue[i];
     struct proc *head   = &rq->head;
     head->pid           = (-1) * (i + 1);
     head->next          = head;
     head->prev          = head;
     rq->size            = 0;
-    release(&rqtable.lock);
+    /* release(&rqtable.lock); */
   }
 }
 
 void printrunqueue(void) {
   for (int i = 0; i < ncpu; i++) {
-    cprintf("runqueue %d : pid ", i + 1);
-    acquire(&rqtable.lock);
+    cprintf("    runqueue %d : pid ", i);
+    /* acquire(&rqtable.lock); */
     struct proc *head = &rqtable.runqueue[i].head;
     struct proc *p    = head->next;
     while (p != head) {
@@ -123,18 +123,56 @@ void printrunqueue(void) {
       p = p->next;
     }
     cprintf("size %d\n", rqtable.runqueue[i].size);
-    release(&rqtable.lock);
+    /* release(&rqtable.lock); */
   }
+  cprintf("\n");
 }
 
 struct proc *pop_rq(void) {
-  printrunqueue();
+  // is it okay ??
+  /* if (myproc()->pid == 1 || myproc()->pid == 2) */
+  /*   return NULL; */
 
-  cprintf("try to pop()\n");
-  acquire(&rqtable.lock);
+  /* printrunqueue(); */
+  /* cprintf("pop()\n"); */
+
+  /* acquire(&rqtable.lock); */
   struct runqueue *rq = &rqtable.runqueue[mycpuid()];
-  /* if (rq->size == 0) */
-  /*   panic("pop_rq : empty runqueue"); */
+
+  // error check : pop empty runqueue
+  if (rq->size == 0) {
+    cprintf("(pid %d, rq %d) ", myproc()->pid, mycpuid());
+    panic("pop_rq : empty runqueue");
+  }
+
+  struct proc *head     = &rq->head;
+  struct proc *p_popped = head->next;
+  head->next            = p_popped->next;
+  p_popped->next->prev  = head;
+  p_popped->next        = NULL;
+  p_popped->prev        = NULL;
+  rq->size--;
+
+  /* release(&rqtable.lock); */
+  return p_popped;
+}
+
+struct proc *pop_rq_arg(struct runqueue *rq) {
+  // is it okay ??
+  /* if (myproc()->pid == 1 || myproc()->pid == 2) */
+  /*   return NULL; */
+
+  /* printrunqueue(); */
+  /* cprintf("pop()\n"); */
+
+  /* acquire(&rqtable.lock); */
+
+  // error check : pop empty runqueue
+  if (rq->size == 0) {
+    cprintf("(pid %d)", myproc()->pid);
+    panic("pop_rq : empty runqueue");
+  }
+
   struct proc *head    = &rq->head;
   struct proc *p_poped = head->next;
   head->next           = p_poped->next;
@@ -143,26 +181,26 @@ struct proc *pop_rq(void) {
   p_poped->prev        = NULL;
   rq->size--;
 
-  release(&rqtable.lock);
+  /* release(&rqtable.lock); */
   return p_poped;
 }
 
 void push_rq(struct proc *p) {
   // why needed?
-  if (p->pid == 2)
-    return;
+  /* if (p->pid == 1 || p->pid == 2) */
+  /*   return; */
 
-  printrunqueue();
+  /* printrunqueue(); */
+  /* cprintf("push(): pid %d\n", p->pid); */
 
-  acquire(&rqtable.lock);
-  cprintf("try to push(): pid %d\n", p->pid);
+  /* acquire(&rqtable.lock); */
 
-  // panic when same pid is pushed
+  // error check : push same pid
   struct proc *head1 = &rqtable.runqueue[mycpuid()].head;
   struct proc *p1    = head1->next;
   while (p1 != head1) {
     if (p->pid == p1->pid) {
-      cprintf("ppid %d, p1pid %d\n", p->pid, p1->pid);
+      /* cprintf("ppid %d, p1pid %d\n", p->pid, p1->pid); */
       panic("push same pid");
       return;
     }
@@ -177,7 +215,39 @@ void push_rq(struct proc *p) {
   p->next    = head;
   head->prev = p;
   tail->next = p;
-  release(&rqtable.lock);
+  /* release(&rqtable.lock); */
+}
+
+void push_rq_arg(struct runqueue *rq, struct proc *p) {
+  // why needed?
+  /* if (p->pid == 1 || p->pid == 2) */
+  /*   return; */
+
+  /* printrunqueue(); */
+  /* cprintf("push(): pid %d\n", p->pid); */
+
+  /* acquire(&rqtable.lock); */
+
+  // error check : push same pid
+  struct proc *head1 = &rqtable.runqueue[mycpuid()].head;
+  struct proc *p1    = head1->next;
+  while (p1 != head1) {
+    if (p->pid == p1->pid) {
+      cprintf("ppid %d, p1pid %d\n", p->pid, p1->pid);
+      panic("push same pid");
+      return;
+    }
+    p1 = p1->next;
+  }
+
+  struct proc *head = &rq->head;
+  struct proc *tail = rq->head.prev;
+  rq->size++;
+  p->prev    = tail;
+  p->next    = head;
+  head->prev = p;
+  tail->next = p;
+  /* release(&rqtable.lock); */
 }
 
 // added
@@ -304,6 +374,7 @@ void userinit(void) {
   // added
   /* writelog(p->pid, USERINIT, p->state, RUNNABLE); */
   p->state = RUNNABLE;
+  push_rq(p); // must place after RUNNABLE(?)
 
   release(&ptable.lock);
 }
@@ -443,9 +514,6 @@ int wait(void) {
       if (p->state == ZOMBIE) {
         // Found one.
 
-        // dequeue
-        pop_rq();
-
         // added
         // Is it OK to place here?
         writelog(p->pid, p->name, WAIT, p->state, UNUSED);
@@ -504,14 +572,57 @@ void scheduler(void) {
   /* int is_first = 1; // added */
 
   for (;;) {
+    /* printrunqueue(); */
+
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
+    // Multiple runqueue scheduler
+    if (IS_MULTIPLE_RUNQUEUE) {
+      struct runqueue *cur_rq = &rqtable.runqueue[mycpuid()];
+
+      // current runqueue is not empty
+      if (cur_rq->size != 0) {
+        p       = pop_rq();
+        c->proc = p;
+        switchuvm(p);
+
+        writelog(p->pid, p->name, TICK, p->state, RUNNING);
+        p->state = RUNNING;
+
+        /* cprintf("switch to from pid(%d) to pid(%d)\n", myproc()->pid, p->pid); */
+        swtch(&(c->scheduler), p->context);
+
+        switchkvm(); // resume from here
+        c->proc = 0;
+      }
+
+      // current runqueue is empty
+      else {
+        struct runqueue *steal_target = NULL;
+        int max_rqsize                = 0;
+
+        // seek stealing target
+        for (int i = 0; i < ncpu; i++) {
+          struct runqueue *rq = &rqtable.runqueue[i];
+          if (rq->size > max_rqsize) {
+            steal_target = rq;
+            max_rqsize   = rq->size;
+          }
+        }
+
+        // work stealing
+        if (steal_target != NULL) {
+          push_rq_arg(cur_rq, pop_rq_arg(steal_target));
+        }
+      }
+    }
+
     // MLFQ-like scheduler
-    if (IS_MLFQ) {
+    else if (IS_MLFQ) {
       int sched_idx = 0; // added
       int is_found  = 0;
       for (int search_prio = MAX_PRIO; search_prio >= 0; search_prio--) {
@@ -553,14 +664,30 @@ void scheduler(void) {
           writelog(p->pid, p->name, TICK, p->state, RUNNING);
           p->state = RUNNING;
 
-          // dequeue
-          // ignore init proc
+          // dequeue (single core)
           /* if (!is_first) */
-          /* pop_rq(); */
+          pop_rq();
           /* is_first = 0; */
 
+          // dequeue (multiple core)
+          /* struct runqueue *cur_rq = &rqtable.runqueue[mycpuid()]; */
+          /* if (cur_rq->size == 0) { */
+          /*   struct runqueue *steal_target = NULL; */
+          /*   int max_rqsize                = 0; */
+          /*   for (int i = 0; i < ncpu; i++) { */
+          /*     struct runqueue *rq = &rqtable.runqueue[i]; */
+          /*     if (rq->size > max_rqsize) { */
+          /*       steal_target = rq; */
+          /*       max_rqsize   = rq->size; */
+          /*     } */
+          /*   } */
+          /*   if (steal_target != NULL) { */
+          /*     push_rq_arg(cur_rq, pop_rq_arg(steal_target)); */
+          /*   } */
+          /* } */
+
           swtch(&(c->scheduler), p->context);
-          // resume from here
+          // resume from here (even when initproc is generated)
           switchkvm();
           c->proc = 0; // ???
         }
@@ -611,7 +738,7 @@ void yield(void) {
   myproc()->state = RUNNABLE;
 
   // enqueue
-  /* push_rq(curproc); */
+  push_rq(curproc);
 
   sched();
   release(&ptable.lock);
@@ -623,6 +750,8 @@ void forkret(void) {
   static int first = 1;
   // Still holding ptable.lock from scheduler.
   release(&ptable.lock);
+
+  cprintf("pid %d\n", myproc()->pid);
 
   if (first) {
     // Some initialization functions must be run in the context
@@ -689,7 +818,7 @@ static void wakeup1(void *chan) {
       writelog(p->pid, p->name, WAKEUP, p->state, RUNNABLE);
 
       // enqueue
-      /* push_rq(p); */
+      push_rq(p);
 
       p->state = RUNNABLE;
     }

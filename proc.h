@@ -51,7 +51,7 @@ struct proc {
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
 
-  int priority; // added
+  int priority;      // added
   struct proc *next; // for runqueue
   struct proc *prev; // for runqueue
 };
@@ -84,6 +84,7 @@ enum events {
 };
 
 #define IS_MLFQ 0
+#define IS_MULTIPLE_RUNQUEUE 1
 #define IS_BOOST_PRIORITY 0
 #define MAX_PRIO 100
 

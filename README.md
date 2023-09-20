@@ -111,3 +111,17 @@ bufwrite system call で記録されたログを print する
 ### 9/15
 - 昨日の実装の続き
 + エラー続きで難航
+
+### 9/19
+- Multiple runqueue scheduler の原型を実装
++ initproc の時、次 switch するプロセスの選び方がよく分からない
+- runqueue の動作を print して可視化
++ マルチコアで動かすと挙動がおかしくなってしまう
+
+### 9/20
+- Multiple runqueue scheduler が動作するようにデバッグ
++ switch 後に inode 関連のパニックが生じる(?)
++ initproc に switch できていない可能性 (pid が不一致)
+- QEMU のアクセラレータとして, KVM を用いるように Make のオプションを変更
++ Clock の下位 5 bit が 0 になる問題は解消された
++ しかし, 実行時間（経過clock）が 30 倍程度長くなった

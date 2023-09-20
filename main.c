@@ -32,9 +32,10 @@ int main(void) {
   ideinit();                                  // disk
   startothers();                              // start other processors
   kinit2(P2V(4 * 1024 * 1024), P2V(PHYSTOP)); // must come after startothers()
-  userinit();                                 // first user process
 
-  runqueueinit();
+  runqueueinit(); // added : need to place before userinit()
+  userinit();     // first user process
+
   buf_rest_size = LOGBUFSIZE; // added
 
   mpmain(); // finish this processor's setup
@@ -53,7 +54,7 @@ static void mpmain(void) {
   cprintf("cpu%d: starting %d\n", cpuid(), cpuid());
   idtinit();                    // load idt register
   xchg(&(mycpu()->started), 1); // tell startothers() we're up
-  scheduler();                  // start running processes
+  scheduler(); // start running processes
 }
 
 pde_t entrypgdir[]; // For entry.S

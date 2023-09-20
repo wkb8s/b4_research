@@ -7,7 +7,7 @@
 
 #define FORK_NUM 4
 #define CALC_NUM 2
-#define CALC_LOOP 100
+#define CALC_LOOP 100000000
 
 char buf[8192];
 int stdout = 1;
@@ -44,7 +44,6 @@ void forktest(void) {
 
   printf(1, "fork test OK\n");
 }
-
 void smallwrite(void) {
   int fd;
   int i;
@@ -202,18 +201,18 @@ void runqueuetest() {
       calculation();
       exit();
     }
-
-    // parent wait child
-    for (pi = 0; pi < FORK_NUM; pi++)
-      wait();
   }
+
+  // parent wait child
+  for (pi = 0; pi < FORK_NUM; pi++)
+    wait();
 }
 
 void yieldrepeat(void) {
   for (int i = 0; i < FORK_NUM; i++) {
     // if child
     if (fork() == 0) {
-      for (int j = 0; j < 10; j++) {
+      for (int j = 0; j < 500; j++) {
         calculation();
         bufwrite(); // need include yield() in sys_bufwrite()
       }
@@ -227,11 +226,12 @@ void yieldrepeat(void) {
 
 int main(int argc, char *argv[]) {
   /* yieldrepeat(); */
-  /* calc_write_mix(); */
+  calc_write_mix();
+  /* fork(); */
   /* fork(); */
   /* fork(); */
   /* bufwrite(); */
-  runqueuetest();
+  /* runqueuetest(); */
 
   exit();
 }
