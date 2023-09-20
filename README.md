@@ -8,20 +8,28 @@
 この実装が終了次第、Linux で同様の作業を行う
 
 ## Implementation
-### kernel (主にscheduler) の拡張
+以下に示すような Kernel の拡張を行った
+### Scheduler
 - Multi level feedback queue (-like) scheduler の追加
 + Priority Boost の実装
 - Multiple runrueue に対応した scheduler の追加
 + Work Stealing の実装
 
 ### Logging
-以下のsystem callを追加した
+測定用に, 2つ system callを追加
 - bufwrite
 bufwrite.c を実行する
 bufwrite.c の実行間はログがバッファに自動的に記録される
-
 - bufread
 bufwrite system call で記録されたログを print する
+
+### Workloads
+測定時に実行するワークロードも実装
+- CPU-intensive なタスク
+- I/O-intensive なタスク
+- 上記の混合タスク
+- xv6 の fairness を崩すようなタスク
+など
 
 ## Discussion
 ### CPU-intensive なタスクについて
