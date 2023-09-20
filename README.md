@@ -1,15 +1,29 @@
 # b4_research
-research for graduation thesis
+卒業論文用リポジトリ
 
-## system calls
-### bufwrite
+## Goal
+教育用オペレーティングシステム xv6 におけるスケジューラのモニタリング / 可視化
+- 常に Idle となるようなコアが発生しないか？
+- プロセス時間の割り当ては Fair に行われているか？
+この実装が終了次第、Linux で同様の作業を行う
+
+## Implementation
+### kernel (主にscheduler) の拡張
+- Multi level feedback queue (-like) scheduler の追加
++ Priority Boost の実装
+- Multiple runrueue に対応した scheduler の追加
++ Work Stealing の実装
+
+### Logging
+以下のsystem callを追加した
+- bufwrite
 bufwrite.c を実行する
 bufwrite.c の実行間はログがバッファに自動的に記録される
 
-### bufread
+- bufread
 bufwrite system call で記録されたログを print する
 
-## discussion
+## Discussion
 ### CPU-intensive なタスクについて
 - プロセスの個数が 1 〜 2 のときは, CPU 2, 3 が特に使われていない
 - プロセス数 4 のとき, CPU が一切入れ替わることなかった (why?)
@@ -27,7 +41,7 @@ bufwrite system call で記録されたログを print する
 - 一方, I/O-intensive なタスクは細切れで実行された
 - 両者が同時に実行されることでスケジューリングに不具合が発生することはなく, 想定通りの挙動となった
 
-## progress
+## Progress
 ### 7/27
 - 最終的な出力イメージ(log_goal.txt)を作成
 - xv6 をマルチコアに対応
@@ -120,8 +134,9 @@ bufwrite system call で記録されたログを print する
 
 ### 9/20
 - Multiple runqueue scheduler が動作するようにデバッグ
-+ switch 後に inode 関連のパニックが生じる(?)
-+ initproc に switch できていない可能性 (pid が不一致)
++ switch 後に myproc() がNULLになる問題を解決
 - QEMU のアクセラレータとして, KVM を用いるように Make のオプションを変更
 + Clock の下位 5 bit が 0 になる問題は解消された
 + しかし, 実行時間（経過clock）が 30 倍程度長くなった
+- Global lock をスケジューラから無くすよう再実装
++ 前段階として, スケジューラでは ptable ではなく, runqueuetable の Global lock を使用するように改変していく
