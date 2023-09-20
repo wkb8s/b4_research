@@ -91,7 +91,6 @@ struct runqueue {
 
 #define MAX_CPU_NUM 100
 
-/* struct runqueue rqtable[MAX_CPU_NUM]; */
 struct rqtable {
   struct runqueue runqueue[MAX_CPU_NUM];
   struct spinlock lock; // delete later
@@ -101,21 +100,18 @@ struct proc head[MAX_CPU_NUM];
 
 void runqueueinit(void) {
   for (int i = 0; i < ncpu; i++) {
-    /* acquire(&rqtable.lock); */
     struct runqueue *rq = &rqtable.runqueue[i];
     struct proc *head   = &rq->head;
     head->pid           = (-1) * (i + 1);
     head->next          = head;
     head->prev          = head;
     rq->size            = 0;
-    /* release(&rqtable.lock); */
   }
 }
 
 void printrunqueue(void) {
   for (int i = 0; i < ncpu; i++) {
     cprintf("    runqueue %d : pid ", i);
-    /* acquire(&rqtable.lock); */
     struct proc *head = &rqtable.runqueue[i].head;
     struct proc *p    = head->next;
     while (p != head) {
@@ -123,28 +119,17 @@ void printrunqueue(void) {
       p = p->next;
     }
     cprintf("size %d\n", rqtable.runqueue[i].size);
-    /* release(&rqtable.lock); */
   }
   cprintf("\n");
 }
 
 struct proc *pop_rq(void) {
-  // is it okay ??
-  /* if (myproc()->pid == 1 || myproc()->pid == 2) */
-  /*   return NULL; */
-
-  /* printrunqueue(); */
-  /* cprintf("pop()\n"); */
-
-  /* acquire(&rqtable.lock); */
   struct runqueue *rq = &rqtable.runqueue[mycpuid()];
-
   // error check : pop empty runqueue
   if (rq->size == 0) {
     cprintf("(pid %d, rq %d) ", myproc()->pid, mycpuid());
     panic("pop_rq : empty runqueue");
   }
-
   struct proc *head     = &rq->head;
   struct proc *p_popped = head->next;
   head->next            = p_popped->next;
@@ -152,27 +137,14 @@ struct proc *pop_rq(void) {
   p_popped->next        = NULL;
   p_popped->prev        = NULL;
   rq->size--;
-
-  /* release(&rqtable.lock); */
   return p_popped;
 }
 
 struct proc *pop_rq_arg(struct runqueue *rq) {
-  // is it okay ??
-  /* if (myproc()->pid == 1 || myproc()->pid == 2) */
-  /*   return NULL; */
-
-  /* printrunqueue(); */
-  /* cprintf("pop()\n"); */
-
-  /* acquire(&rqtable.lock); */
-
-  // error check : pop empty runqueue
   if (rq->size == 0) {
     cprintf("(pid %d)", myproc()->pid);
     panic("pop_rq : empty runqueue");
   }
-
   struct proc *head    = &rq->head;
   struct proc *p_poped = head->next;
   head->next           = p_poped->next;
@@ -180,33 +152,19 @@ struct proc *pop_rq_arg(struct runqueue *rq) {
   p_poped->next        = NULL;
   p_poped->prev        = NULL;
   rq->size--;
-
-  /* release(&rqtable.lock); */
   return p_poped;
 }
 
 void push_rq(struct proc *p) {
-  // why needed?
-  /* if (p->pid == 1 || p->pid == 2) */
-  /*   return; */
-
-  /* printrunqueue(); */
-  /* cprintf("push(): pid %d\n", p->pid); */
-
-  /* acquire(&rqtable.lock); */
-
-  // error check : push same pid
   struct proc *head1 = &rqtable.runqueue[mycpuid()].head;
   struct proc *p1    = head1->next;
   while (p1 != head1) {
     if (p->pid == p1->pid) {
-      /* cprintf("ppid %d, p1pid %d\n", p->pid, p1->pid); */
       panic("push same pid");
       return;
     }
     p1 = p1->next;
   }
-
   struct runqueue *rq = &rqtable.runqueue[mycpuid()];
   struct proc *head   = &rq->head;
   struct proc *tail   = rq->head.prev;
@@ -215,20 +173,9 @@ void push_rq(struct proc *p) {
   p->next    = head;
   head->prev = p;
   tail->next = p;
-  /* release(&rqtable.lock); */
 }
 
 void push_rq_arg(struct runqueue *rq, struct proc *p) {
-  // why needed?
-  /* if (p->pid == 1 || p->pid == 2) */
-  /*   return; */
-
-  /* printrunqueue(); */
-  /* cprintf("push(): pid %d\n", p->pid); */
-
-  /* acquire(&rqtable.lock); */
-
-  // error check : push same pid
   struct proc *head1 = &rqtable.runqueue[mycpuid()].head;
   struct proc *p1    = head1->next;
   while (p1 != head1) {
@@ -239,7 +186,6 @@ void push_rq_arg(struct runqueue *rq, struct proc *p) {
     }
     p1 = p1->next;
   }
-
   struct proc *head = &rq->head;
   struct proc *tail = rq->head.prev;
   rq->size++;
@@ -247,7 +193,6 @@ void push_rq_arg(struct runqueue *rq, struct proc *p) {
   p->next    = head;
   head->prev = p;
   tail->next = p;
-  /* release(&rqtable.lock); */
 }
 
 // added
@@ -261,25 +206,17 @@ int mystrcmp(const char *p, const char *q) {
 // added
 void writelog(int pid, char *pname, char event_name, int prev_pstate,
               int next_pstate) {
-  /* if (buf_rest_size > 0) { */
   if (buf_rest_size > 0 && !mystrcmp(pname, "bufwrite")) {
     buf_log[LOGBUFSIZE - buf_rest_size].clock = rdtsc();
     buf_log[LOGBUFSIZE - buf_rest_size].pid   = pid;
-
     for (int i = 0; i < 16; i++) {
       buf_log[LOGBUFSIZE - buf_rest_size].name[i] = pname[i];
     }
-
     buf_log[LOGBUFSIZE - buf_rest_size].event_name  = event_name;
     buf_log[LOGBUFSIZE - buf_rest_size].prev_pstate = prev_pstate;
     buf_log[LOGBUFSIZE - buf_rest_size].next_pstate = next_pstate;
     buf_log[LOGBUFSIZE - buf_rest_size].cpu         = mycpuid();
-
     buf_rest_size--;
-
-    /* if (buf_rest_size == 0) { */
-    /*   cprintf("logging finished\n"); */
-    /* } */
   }
 }
 
@@ -374,7 +311,7 @@ void userinit(void) {
   // added
   /* writelog(p->pid, USERINIT, p->state, RUNNABLE); */
   p->state = RUNNABLE;
-  push_rq(p); // must place after RUNNABLE(?)
+  push_rq(p); // don't forget to push initproc!
 
   release(&ptable.lock);
 }
@@ -435,13 +372,13 @@ int fork(void) {
   pid = np->pid;
 
   // enqueue
-  push_rq(np);
+  if (IS_MULTIPLE_RUNQUEUE)
+    push_rq(np);
 
   acquire(&ptable.lock);
 
   // added
   writelog(np->pid, np->name, FORK, np->state, RUNNABLE);
-  /* writelog(curproc->pid, FORK, curproc->state, RUNNABLE); */
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -515,7 +452,6 @@ int wait(void) {
         // Found one.
 
         // added
-        // Is it OK to place here?
         writelog(p->pid, p->name, WAIT, p->state, UNUSED);
 
         pid = p->pid;
@@ -567,133 +503,106 @@ void boost_prio(void) {
 void scheduler(void) {
   struct proc *p;
   struct cpu *c = mycpu();
-  // ???
-  c->proc = 0;
-  /* int is_first = 1; // added */
+  c->proc       = 0;
 
-  for (;;) {
-    /* printrunqueue(); */
-
+  // Multiple runqueue scheduler
+  while (IS_MULTIPLE_RUNQUEUE) {
     // Enable interrupts on this processor.
     sti();
-
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    // Multiple runqueue scheduler
-    if (IS_MULTIPLE_RUNQUEUE) {
-      struct runqueue *cur_rq = &rqtable.runqueue[mycpuid()];
+    struct runqueue *cur_rq = &rqtable.runqueue[mycpuid()];
 
-      // current runqueue is not empty
-      if (cur_rq->size != 0) {
-        p       = pop_rq();
-        c->proc = p;
-        switchuvm(p);
+    // current runqueue is not empty
+    if (cur_rq->size != 0) {
+      p       = pop_rq(); // dequeue
+      c->proc = p;
+      switchuvm(p);
+      writelog(p->pid, p->name, TICK, p->state, RUNNING);
+      p->state = RUNNING;
+      swtch(&(c->scheduler), p->context);
+      switchkvm(); // resume from here
+      c->proc = 0;
+    }
 
-        writelog(p->pid, p->name, TICK, p->state, RUNNING);
-        p->state = RUNNING;
-
-        /* cprintf("switch to from pid(%d) to pid(%d)\n", myproc()->pid, p->pid); */
-        swtch(&(c->scheduler), p->context);
-
-        switchkvm(); // resume from here
-        c->proc = 0;
+    // current runqueue is empty
+    else {
+      struct runqueue *steal_target = NULL;
+      int max_rqsize                = 0;
+      // seek stealing target
+      for (int i = 0; i < ncpu; i++) {
+        struct runqueue *rq = &rqtable.runqueue[i];
+        if (rq->size > max_rqsize) {
+          steal_target = rq;
+          max_rqsize   = rq->size;
+        }
       }
-
-      // current runqueue is empty
-      else {
-        struct runqueue *steal_target = NULL;
-        int max_rqsize                = 0;
-
-        // seek stealing target
-        for (int i = 0; i < ncpu; i++) {
-          struct runqueue *rq = &rqtable.runqueue[i];
-          if (rq->size > max_rqsize) {
-            steal_target = rq;
-            max_rqsize   = rq->size;
-          }
-        }
-
-        // work stealing
-        if (steal_target != NULL) {
-          push_rq_arg(cur_rq, pop_rq_arg(steal_target));
-        }
+      // work stealing
+      if (steal_target != NULL) {
+        push_rq_arg(cur_rq, pop_rq_arg(steal_target));
       }
     }
 
-    // MLFQ-like scheduler
-    else if (IS_MLFQ) {
-      int sched_idx = 0; // added
-      int is_found  = 0;
-      for (int search_prio = MAX_PRIO; search_prio >= 0; search_prio--) {
-        // search next process
-        for (int i = 0; i < NPROC; i++) {
-          p = &ptable.proc[sched_idx];
+    release(&ptable.lock);
+  }
 
-          is_found = 0;
-          if (p->state == RUNNABLE && p->priority == search_prio) {
-            is_found = 1;
-            c->proc  = p;
-            switchuvm(p);
-            writelog(p->pid, p->name, TICK, p->state, RUNNING);
-            p->state = RUNNING;
-            swtch(&(c->scheduler), p->context);
-            switchkvm(); // resume from here
-            c->proc = 0; // ???
+  // MLFQ-like scheduler
+  while (IS_MLFQ) {
+    // Enable interrupts on this processor.
+    sti();
+    // Loop over process table looking for process to run.
+    acquire(&ptable.lock);
+    int sched_idx = 0; // added
+    int is_found  = 0;
+    for (int search_prio = MAX_PRIO; search_prio >= 0; search_prio--) {
+      // search next process
+      for (int i = 0; i < NPROC; i++) {
+        p        = &ptable.proc[sched_idx];
+        is_found = 0;
+        if (p->state == RUNNABLE && p->priority == search_prio) {
+          is_found = 1;
+          c->proc  = p;
+          switchuvm(p);
+          writelog(p->pid, p->name, TICK, p->state, RUNNING);
+          p->state = RUNNING;
+          swtch(&(c->scheduler), p->context);
+          switchkvm();
+          c->proc = 0;
+        } else {
+          if (sched_idx == NPROC - 1) {
+            sched_idx = 0;
           } else {
-            if (sched_idx == NPROC - 1) {
-              sched_idx = 0;
-            } else {
-              sched_idx++;
-            }
+            sched_idx++;
           }
-          if (is_found)
-            break;
         }
         if (is_found)
           break;
       }
+      if (is_found)
+        break;
     }
+    release(&ptable.lock);
+  }
 
-    // default round robin scheduler
-    else {
-      for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-        if (p->state == RUNNABLE) {
-          c->proc = p;
-          switchuvm(p);
-          writelog(p->pid, p->name, TICK, p->state, RUNNING);
-          p->state = RUNNING;
-
-          // dequeue (single core)
-          /* if (!is_first) */
-          pop_rq();
-          /* is_first = 0; */
-
-          // dequeue (multiple core)
-          /* struct runqueue *cur_rq = &rqtable.runqueue[mycpuid()]; */
-          /* if (cur_rq->size == 0) { */
-          /*   struct runqueue *steal_target = NULL; */
-          /*   int max_rqsize                = 0; */
-          /*   for (int i = 0; i < ncpu; i++) { */
-          /*     struct runqueue *rq = &rqtable.runqueue[i]; */
-          /*     if (rq->size > max_rqsize) { */
-          /*       steal_target = rq; */
-          /*       max_rqsize   = rq->size; */
-          /*     } */
-          /*   } */
-          /*   if (steal_target != NULL) { */
-          /*     push_rq_arg(cur_rq, pop_rq_arg(steal_target)); */
-          /*   } */
-          /* } */
-
-          swtch(&(c->scheduler), p->context);
-          // resume from here (even when initproc is generated)
-          switchkvm();
-          c->proc = 0; // ???
-        }
+  // default round robin scheduler
+  while (IS_ROUNDROBIN) {
+    // Enable interrupts on this processor.
+    sti();
+    // Loop over process table looking for process to run.
+    acquire(&ptable.lock);
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->state == RUNNABLE) {
+        c->proc = p;
+        switchuvm(p);
+        writelog(p->pid, p->name, TICK, p->state, RUNNING);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        // resume from here (even when initproc is generated)
+        switchkvm();
+        c->proc = 0; // no process is executed in current CPU
       }
     }
-
     release(&ptable.lock);
   }
 }
@@ -738,7 +647,8 @@ void yield(void) {
   myproc()->state = RUNNABLE;
 
   // enqueue
-  push_rq(curproc);
+  if (IS_MULTIPLE_RUNQUEUE)
+    push_rq(curproc);
 
   sched();
   release(&ptable.lock);
@@ -750,8 +660,6 @@ void forkret(void) {
   static int first = 1;
   // Still holding ptable.lock from scheduler.
   release(&ptable.lock);
-
-  cprintf("pid %d\n", myproc()->pid);
 
   if (first) {
     // Some initialization functions must be run in the context
@@ -818,7 +726,8 @@ static void wakeup1(void *chan) {
       writelog(p->pid, p->name, WAKEUP, p->state, RUNNABLE);
 
       // enqueue
-      push_rq(p);
+      if (IS_MULTIPLE_RUNQUEUE)
+        push_rq(p);
 
       p->state = RUNNABLE;
     }

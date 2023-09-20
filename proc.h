@@ -83,8 +83,11 @@ enum events {
   SWITCH
 };
 
+// enable only one of them
 #define IS_MLFQ 0
 #define IS_MULTIPLE_RUNQUEUE 1
+#define IS_ROUNDROBIN 1
+
 #define IS_BOOST_PRIORITY 0
 #define MAX_PRIO 100
 

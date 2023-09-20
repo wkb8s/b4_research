@@ -6,8 +6,8 @@
 #include "fcntl.h"
 
 #define FORK_NUM 4
-#define CALC_NUM 2
-#define CALC_LOOP 100000000
+#define CALC_NUM 4
+#define CALC_LOOP 100
 
 char buf[8192];
 int stdout = 1;
@@ -225,8 +225,8 @@ void yieldrepeat(void) {
 }
 
 int main(int argc, char *argv[]) {
-  /* yieldrepeat(); */
-  calc_write_mix();
+  yieldrepeat();
+  /* calc_write_mix(); */
   /* fork(); */
   /* fork(); */
   /* fork(); */
