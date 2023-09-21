@@ -514,23 +514,11 @@ void scheduler(void) {
 
     struct runqueue *cur_rq = &rqtable.runqueue[mycpuid()];
 
-    // current runqueue is not empty
-    if (cur_rq->size != 0) {
-      p       = pop_rq(); // dequeue
-      c->proc = p;
-      switchuvm(p);
-      writelog(p->pid, p->name, TICK, p->state, RUNNING);
-      p->state = RUNNING;
-      swtch(&(c->scheduler), p->context);
-      switchkvm(); // resume from here
-      c->proc = 0;
-    }
-
     // current runqueue is empty
-    else {
+    if (cur_rq->size == 0) {
+      // seek stealing target
       struct runqueue *steal_target = NULL;
       int max_rqsize                = 0;
-      // seek stealing target
       for (int i = 0; i < ncpu; i++) {
         struct runqueue *rq = &rqtable.runqueue[i];
         if (rq->size > max_rqsize) {
@@ -538,10 +526,24 @@ void scheduler(void) {
           max_rqsize   = rq->size;
         }
       }
-      // work stealing
+      // steal process
       if (steal_target != NULL) {
+        if (steal_target->size == 0)
+          panic("strictly speaking, it's not work conserving!\n");
         push_rq_arg(cur_rq, pop_rq_arg(steal_target));
       }
+    }
+
+    // current runqueue is not empty
+    else {
+      p       = pop_rq();
+      c->proc = p;
+      switchuvm(p);
+      writelog(p->pid, p->name, TICK, p->state, RUNNING);
+      p->state = RUNNING;
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+      c->proc = 0;
     }
 
     release(&ptable.lock);
@@ -618,8 +620,13 @@ void sched(void) {
   int intena;
   struct proc *p = myproc();
 
+  /* if (IS_ROUNDROBIN) */
   if (!holding(&ptable.lock))
     panic("sched ptable.lock");
+  /* if (IS_MULTIPLE_RUNQUEUE) */
+  /*   if (!holding(&rqtable.lock)) */
+  /* panic("sched rqtable.lock"); */
+
   if (mycpu()->ncli != 1)
     panic("sched locks");
   if (p->state == RUNNING)
@@ -659,7 +666,11 @@ void yield(void) {
 void forkret(void) {
   static int first = 1;
   // Still holding ptable.lock from scheduler.
+
+  /* if (IS_ROUNDROBIN) */
   release(&ptable.lock);
+  /* if (IS_MULTIPLE_RUNQUEUE) */
+  /*   release(&rqtable.lock); */
 
   if (first) {
     // Some initialization functions must be run in the context
@@ -691,7 +702,10 @@ void sleep(void *chan, struct spinlock *lk) {
   // (wakeup runs with ptable.lock locked),
   // so it's okay to release lk.
   if (lk != &ptable.lock) { // DOC: sleeplock0
+                            /* if (IS_ROUNDROBIN) */
     acquire(&ptable.lock);  // DOC: sleeplock1
+    /* if (IS_MULTIPLE_RUNQUEUE) */
+    /*   acquire(&rqtable.lock); */
     release(lk);
   }
   // Go to sleep.
@@ -709,7 +723,10 @@ void sleep(void *chan, struct spinlock *lk) {
 
   // Reacquire original lock.
   if (lk != &ptable.lock) { // DOC: sleeplock2
+                            /* if (IS_ROUNDROBIN) */
     release(&ptable.lock);
+    /* if (IS_MULTIPLE_RUNQUEUE) */
+    /*   release(&rqtable.lock); */
     acquire(lk);
   }
 }

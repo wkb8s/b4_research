@@ -3,7 +3,8 @@
 
 ## Goal
 教育用オペレーティングシステム xv6 におけるスケジューラのモニタリング / 可視化を行う.
-この実装が終了次第、Linux で同様の作業を行う
+また, scheduler を改良し, Fairness が崩れていたような Workload について, 改良前後での比較（可視化を利用）を行う.
+この実装が終了次第、Linux で同様の作業を行う.
 - 常に Idle となるようなコアが発生しないか？
 - プロセス時間の割り当ては Fair に行われているか？
 
@@ -148,4 +149,5 @@ bufwrite system call で記録されたログを print する
 + 前段階として, スケジューラでは ptable ではなく, runqueuetable の Global lock を使用するように改変していく
 
 ### 9/21
-
+- runqueue の lock を改良する前に, fair に cpu 時間を割り当てられているか確かめる方を優先する
+- multiple runqueue scheduler で測定したデータを使用すると, plot 用のプログラムがおかしくなる不具合を修正
