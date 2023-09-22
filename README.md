@@ -149,5 +149,14 @@ bufwrite system call で記録されたログを print する
 + 前段階として, スケジューラでは ptable ではなく, runqueuetable の Global lock を使用するように改変していく
 
 ### 9/21
-- runqueue の lock を改良する前に, fair に cpu 時間を割り当てられているか確かめる方を優先する
+- 想定通りに cpu 時間が割り当てられているかどうかを確認
++ 概ねスケジューラで意図している通りの動作をしていることを確認
++ fairness の観点で改善の余地あり
 - multiple runqueue scheduler で測定したデータを使用すると, plot 用のプログラムがおかしくなる不具合を修正
+- Global lock をスケジューラから無くし, ひたすらデバッグ
++ acquire が 2 回呼ばれている箇所を探す
+
+### 9/22
+- シングルコアで global lock を取らずに動作できるようになった
++ lock の acquire が重複して呼ばれるバグに1日悩まされていたが, 自分が変更した ptable.lock の問題ではなく, デバッグ用の cprintf 呼出中に interrupt が入るなりして, console の lock が acquire されてしまっていたことが原因であった
++ multiple runqueue + global lock のもっさり動作が解消され, オリジナルの xv6 と同様の速度になった

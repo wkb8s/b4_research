@@ -91,16 +91,12 @@ struct runqueue {
 
 #define MAX_CPU_NUM 100
 
-struct rqtable {
-  struct runqueue runqueue[MAX_CPU_NUM];
-  struct spinlock lock; // delete later
-};
-struct rqtable rqtable;
+struct runqueue runqueue[MAX_CPU_NUM];
 struct proc head[MAX_CPU_NUM];
 
 void runqueueinit(void) {
   for (int i = 0; i < ncpu; i++) {
-    struct runqueue *rq = &rqtable.runqueue[i];
+    struct runqueue *rq = &runqueue[i];
     struct proc *head   = &rq->head;
     head->pid           = (-1) * (i + 1);
     head->next          = head;
@@ -112,19 +108,19 @@ void runqueueinit(void) {
 void printrunqueue(void) {
   for (int i = 0; i < ncpu; i++) {
     cprintf("    runqueue %d : pid ", i);
-    struct proc *head = &rqtable.runqueue[i].head;
+    struct proc *head = &runqueue[i].head;
     struct proc *p    = head->next;
     while (p != head) {
       cprintf("%d, ", p->pid);
       p = p->next;
     }
-    cprintf("size %d\n", rqtable.runqueue[i].size);
+    cprintf("size %d\n", runqueue[i].size);
   }
   cprintf("\n");
 }
 
 struct proc *pop_rq(void) {
-  struct runqueue *rq = &rqtable.runqueue[mycpuid()];
+  struct runqueue *rq = &runqueue[mycpuid()];
   // error check : pop empty runqueue
   if (rq->size == 0) {
     cprintf("(pid %d, rq %d) ", myproc()->pid, mycpuid());
@@ -156,7 +152,7 @@ struct proc *pop_rq_arg(struct runqueue *rq) {
 }
 
 void push_rq(struct proc *p) {
-  struct proc *head1 = &rqtable.runqueue[mycpuid()].head;
+  struct proc *head1 = &runqueue[mycpuid()].head;
   struct proc *p1    = head1->next;
   while (p1 != head1) {
     if (p->pid == p1->pid) {
@@ -165,7 +161,7 @@ void push_rq(struct proc *p) {
     }
     p1 = p1->next;
   }
-  struct runqueue *rq = &rqtable.runqueue[mycpuid()];
+  struct runqueue *rq = &runqueue[mycpuid()];
   struct proc *head   = &rq->head;
   struct proc *tail   = rq->head.prev;
   rq->size++;
@@ -176,7 +172,7 @@ void push_rq(struct proc *p) {
 }
 
 void push_rq_arg(struct runqueue *rq, struct proc *p) {
-  struct proc *head1 = &rqtable.runqueue[mycpuid()].head;
+  struct proc *head1 = &runqueue[mycpuid()].head;
   struct proc *p1    = head1->next;
   while (p1 != head1) {
     if (p->pid == p1->pid) {
@@ -509,10 +505,8 @@ void scheduler(void) {
   while (IS_MULTIPLE_RUNQUEUE) {
     // Enable interrupts on this processor.
     sti();
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
 
-    struct runqueue *cur_rq = &rqtable.runqueue[mycpuid()];
+    struct runqueue *cur_rq = &runqueue[mycpuid()];
 
     // current runqueue is empty
     if (cur_rq->size == 0) {
@@ -520,17 +514,19 @@ void scheduler(void) {
       struct runqueue *steal_target = NULL;
       int max_rqsize                = 0;
       for (int i = 0; i < ncpu; i++) {
-        struct runqueue *rq = &rqtable.runqueue[i];
+        struct runqueue *rq = &runqueue[i];
         if (rq->size > max_rqsize) {
           steal_target = rq;
           max_rqsize   = rq->size;
         }
       }
       // steal process
-      if (steal_target != NULL) {
+      if (steal_target != NULL && steal_target->size == 0) {
+        acquire(&steal_target->lock);
         if (steal_target->size == 0)
-          panic("strictly speaking, it's not work conserving!\n");
+          cprintf("strictly speaking, it's not work conserving!");
         push_rq_arg(cur_rq, pop_rq_arg(steal_target));
+        release(&steal_target->lock);
       }
     }
 
@@ -545,8 +541,6 @@ void scheduler(void) {
       switchkvm();
       c->proc = 0;
     }
-
-    release(&ptable.lock);
   }
 
   // MLFQ-like scheduler
@@ -620,13 +614,8 @@ void sched(void) {
   int intena;
   struct proc *p = myproc();
 
-  /* if (IS_ROUNDROBIN) */
   if (!holding(&ptable.lock))
     panic("sched ptable.lock");
-  /* if (IS_MULTIPLE_RUNQUEUE) */
-  /*   if (!holding(&rqtable.lock)) */
-  /* panic("sched rqtable.lock"); */
-
   if (mycpu()->ncli != 1)
     panic("sched locks");
   if (p->state == RUNNING)
@@ -634,8 +623,18 @@ void sched(void) {
   if (readeflags() & FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
-  swtch(&p->context, mycpu()->scheduler);
-  mycpu()->intena = intena;
+
+  // added
+  if (IS_MULTIPLE_RUNQUEUE) {
+  struct cpu *curcpu = mycpu();
+  release(&ptable.lock);
+    swtch(&p->context, curcpu->scheduler);
+    acquire(&ptable.lock);
+    curcpu->intena = intena;
+  } else {
+    swtch(&p->context, mycpu()->scheduler);
+    mycpu()->intena = intena;
+  }
 }
 
 // Give up the CPU for one scheduling round.
@@ -667,10 +666,8 @@ void forkret(void) {
   static int first = 1;
   // Still holding ptable.lock from scheduler.
 
-  /* if (IS_ROUNDROBIN) */
-  release(&ptable.lock);
-  /* if (IS_MULTIPLE_RUNQUEUE) */
-  /*   release(&rqtable.lock); */
+  if (!IS_MULTIPLE_RUNQUEUE)
+    release(&ptable.lock);
 
   if (first) {
     // Some initialization functions must be run in the context
@@ -702,10 +699,7 @@ void sleep(void *chan, struct spinlock *lk) {
   // (wakeup runs with ptable.lock locked),
   // so it's okay to release lk.
   if (lk != &ptable.lock) { // DOC: sleeplock0
-                            /* if (IS_ROUNDROBIN) */
     acquire(&ptable.lock);  // DOC: sleeplock1
-    /* if (IS_MULTIPLE_RUNQUEUE) */
-    /*   acquire(&rqtable.lock); */
     release(lk);
   }
   // Go to sleep.
@@ -723,10 +717,7 @@ void sleep(void *chan, struct spinlock *lk) {
 
   // Reacquire original lock.
   if (lk != &ptable.lock) { // DOC: sleeplock2
-                            /* if (IS_ROUNDROBIN) */
     release(&ptable.lock);
-    /* if (IS_MULTIPLE_RUNQUEUE) */
-    /*   release(&rqtable.lock); */
     acquire(lk);
   }
 }
@@ -752,6 +743,10 @@ static void wakeup1(void *chan) {
 
 // Wake up all processes sleeping on chan.
 void wakeup(void *chan) {
+  // added
+  if (holding(&ptable.lock))
+    panic("already locked!\n");
+
   acquire(&ptable.lock);
   wakeup1(chan);
   release(&ptable.lock);
