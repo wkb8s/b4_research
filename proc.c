@@ -368,8 +368,19 @@ int fork(void) {
   pid = np->pid;
 
   // enqueue
-  if (IS_MULTIPLE_RUNQUEUE)
-    push_rq(np);
+  if (IS_MULTIPLE_RUNQUEUE) {
+    // seek stealing target
+    struct runqueue *push_target = NULL;
+    int min_rqsize               = 100;
+    for (int i = 0; i < ncpu; i++) {
+      struct runqueue *rq = &runqueue[i];
+      if (rq->size < min_rqsize) {
+        push_target = rq;
+        min_rqsize  = rq->size;
+      }
+    }
+    push_rq_arg(push_target, np);
+  }
 
   acquire(&ptable.lock);
 
@@ -522,11 +533,15 @@ void scheduler(void) {
       }
       // steal process
       if (steal_target != NULL && steal_target->size == 0) {
-        acquire(&steal_target->lock);
-        if (steal_target->size == 0)
-          cprintf("strictly speaking, it's not work conserving!");
-        push_rq_arg(cur_rq, pop_rq_arg(steal_target));
-        release(&steal_target->lock);
+        /* acquire(&steal_target->lock); */
+        // steal_target may be vanished by execution
+        if (steal_target->size != 0) {
+          push_rq_arg(cur_rq, pop_rq_arg(steal_target));
+        }
+        /* else { */
+        /*   cprintf("strictly speaking, it's not work conserving!\n"); */
+        /* } */
+        /* release(&steal_target->lock); */
       }
     }
 
@@ -626,8 +641,8 @@ void sched(void) {
 
   // added
   if (IS_MULTIPLE_RUNQUEUE) {
-  struct cpu *curcpu = mycpu();
-  release(&ptable.lock);
+    struct cpu *curcpu = mycpu();
+    release(&ptable.lock);
     swtch(&p->context, curcpu->scheduler);
     acquire(&ptable.lock);
     curcpu->intena = intena;
@@ -641,8 +656,6 @@ void sched(void) {
 void yield(void) {
   struct proc *curproc = myproc();
 
-  acquire(&ptable.lock); // DOC: yieldlock
-
   // decrease priority
   if (IS_MLFQ && curproc->priority > 0)
     curproc->priority--;
@@ -650,11 +663,14 @@ void yield(void) {
   // added
   writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE);
 
-  myproc()->state = RUNNABLE;
-
   // enqueue
   if (IS_MULTIPLE_RUNQUEUE)
     push_rq(curproc);
+
+  // change place
+  acquire(&ptable.lock); // DOC: yieldlock
+
+  myproc()->state = RUNNABLE;
 
   sched();
   release(&ptable.lock);

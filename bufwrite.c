@@ -5,8 +5,8 @@
 #include "fs.h"
 #include "fcntl.h"
 
-#define FORK_NUM 4
-#define CALC_NUM 4
+#define FORK_NUM 8
+#define CALC_NUM 8
 #define CALC_LOOP 100
 
 char buf[8192];

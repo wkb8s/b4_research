@@ -157,6 +157,8 @@ bufwrite system call で記録されたログを print する
 + acquire が 2 回呼ばれている箇所を探す
 
 ### 9/22
-- シングルコアで global lock を取らずに動作できるようになった
-+ lock の acquire が重複して呼ばれるバグに1日悩まされていたが, 自分が変更した ptable.lock の問題ではなく, デバッグ用の cprintf 呼出中に interrupt が入るなりして, console の lock が acquire されてしまっていたことが原因であった
-+ multiple runqueue + global lock のもっさり動作が解消され, オリジナルの xv6 と同様の速度になった
+- マルチコア・シングルコアで global lock を取らずに multiple runqueue scheduler が動作するようになった
++ lock の acquire が重複して呼ばれるバグに悩まされていたが, 自分が変更した ptable.lock の問題ではなく, デバッグ用の cprintf 呼出中に interrupt が入ることで, console の lock が acquire されてしまっていたことが原因であった
++ multiple runqueue + global lock のもっさり動作が解消され, オリジナルの xv6 と同様の速度になっ(追記：コア数を増やしたら意図した通りの結果になった)
++ 実装が正しい保証はないが, 元々意図していた global lock の有無に起因する性能差は見られなかった
++ 当然だが, プロセス数を 10000 個に増やした時にスケジューラの速度に大きな差が見られた

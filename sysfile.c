@@ -434,6 +434,10 @@ int sys_bufread(void) {
   cprintf("clock,pid,pname,event_name,pstate_prev,pstate_next,cpu\n");
 
   for (int i = 0; i < LOGBUFSIZE; i++) {
+    // temporal
+    if (buf_log[i].pid == 0)
+      continue;
+
     // print clock
     char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
     convert_to_hexa(buf_log[i].clock.hi, hi_hex);
