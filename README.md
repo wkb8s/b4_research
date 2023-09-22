@@ -158,7 +158,7 @@ bufwrite system call で記録されたログを print する
 
 ### 9/22
 - マルチコア・シングルコアで global lock を取らずに multiple runqueue scheduler が動作するようになった
-+ lock の acquire が重複して呼ばれるバグに悩まされていたが, 自分が変更した ptable.lock の問題ではなく, デバッグ用の cprintf 呼出中に interrupt が入ることで, console の lock が acquire されてしまっていたことが原因であった
-+ multiple runqueue + global lock のもっさり動作が解消され, オリジナルの xv6 と同様の速度になっ(追記：コア数を増やしたら意図した通りの結果になった)
-+ 実装が正しい保証はないが, 元々意図していた global lock の有無に起因する性能差は見られなかった
-+ 当然だが, プロセス数を 10000 個に増やした時にスケジューラの速度に大きな差が見られた
++ lock の acquire が重複して呼ばれるバグに悩まされていたが, 自分が変更した ptable.lock の問題ではなく,
+デバッグ用の cprintf 呼出中に interrupt が入ることで, console の lock が acquire されてしまっていたことが原因であった
++ コア数を増やした場合, global lock の影響で Round-robin scheduler は性能低下が起きたが, multiple runqueue scheduler では性能を維持することを確認した
++ プロセス数を 10000 個に増やした時にスケジューラの速度に大きな差が見られた (Round-robin scheduler では ptable の全探索を行うため)
