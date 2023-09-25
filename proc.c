@@ -10,6 +10,7 @@
 // added
 struct schedlog buf_log[LOGBUFSIZE];
 int buf_rest_size = 0;
+int push_index;
 
 // added
 // get clock
@@ -103,6 +104,8 @@ void runqueueinit(void) {
     head->prev          = head;
     rq->size            = 0;
   }
+
+  push_index = 0;
 }
 
 void printrunqueue(void) {
@@ -203,6 +206,7 @@ int mystrcmp(const char *p, const char *q) {
 void writelog(int pid, char *pname, char event_name, int prev_pstate,
               int next_pstate) {
   if (buf_rest_size > 0 && !mystrcmp(pname, "bufwrite")) {
+    buf_rest_size--;
     buf_log[LOGBUFSIZE - buf_rest_size].clock = rdtsc();
     buf_log[LOGBUFSIZE - buf_rest_size].pid   = pid;
     for (int i = 0; i < 16; i++) {
@@ -212,7 +216,6 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
     buf_log[LOGBUFSIZE - buf_rest_size].prev_pstate = prev_pstate;
     buf_log[LOGBUFSIZE - buf_rest_size].next_pstate = next_pstate;
     buf_log[LOGBUFSIZE - buf_rest_size].cpu         = mycpuid();
-    buf_rest_size--;
   }
 }
 
@@ -369,17 +372,21 @@ int fork(void) {
 
   // enqueue
   if (IS_MULTIPLE_RUNQUEUE) {
-    // seek stealing target
-    struct runqueue *push_target = NULL;
-    int min_rqsize               = 100;
-    for (int i = 0; i < ncpu; i++) {
-      struct runqueue *rq = &runqueue[i];
-      if (rq->size < min_rqsize) {
-        push_target = rq;
-        min_rqsize  = rq->size;
-      }
-    }
-    push_rq_arg(push_target, np);
+    /* struct runqueue *push_target = NULL; */
+    /* int min_rqsize               = 100; */
+    /* for (int i = 0; i < ncpu; i++) { */
+    /*   struct runqueue *rq = &runqueue[i]; */
+    /*   if (rq->size < min_rqsize) { */
+    /*     push_target = rq; */
+    /*     min_rqsize  = rq->size; */
+    /*   } */
+    /* } */
+    /* if (push_target != NULL) */
+    /*   push_rq_arg(push_target, np); */
+    /* else */
+    /*   panic("no runqueue to choose"); */
+
+    push_rq_arg(&runqueue[push_index++ % ncpu], np);
   }
 
   acquire(&ptable.lock);
@@ -455,9 +462,9 @@ int wait(void) {
       if (p->parent != curproc)
         continue;
       havekids = 1;
-      if (p->state == ZOMBIE) {
-        // Found one.
 
+      // Found one.
+      if (p->state == ZOMBIE) {
         // added
         writelog(p->pid, p->name, WAIT, p->state, UNUSED);
 
@@ -670,7 +677,8 @@ void yield(void) {
   // change place
   acquire(&ptable.lock); // DOC: yieldlock
 
-  myproc()->state = RUNNABLE;
+  curproc->state = RUNNABLE;
+  /* myproc()->state = RUNNABLE; */
 
   sched();
   release(&ptable.lock);

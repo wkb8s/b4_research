@@ -162,3 +162,9 @@ bufwrite system call で記録されたログを print する
 デバッグ用の cprintf 呼出中に interrupt が入ることで, console の lock が acquire されてしまっていたことが原因であった
 + コア数を増やした場合, global lock の影響で Round-robin scheduler は性能低下が起きたが, multiple runqueue scheduler では性能を維持することを確認した
 + プロセス数を 10000 個に増やした時にスケジューラの速度に大きな差が見られた (Round-robin scheduler では ptable の全探索を行うため)
+
+### 9/25
+- CPU 使用率を測定するスクリプトを追加
+- マルチコアにおける Visualize 時に, RUNNING でない大きな空洞が生じるバグを修正. 期待通りの結果を取得できた
++ YIELD イベント時のロギングが一部機能していないことが原因だった
++ CPU 使用率を 10% から 40% に高めることができた

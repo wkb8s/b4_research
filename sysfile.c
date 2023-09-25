@@ -435,8 +435,8 @@ int sys_bufread(void) {
 
   for (int i = 0; i < LOGBUFSIZE; i++) {
     // temporal
-    if (buf_log[i].pid == 0)
-      continue;
+    /* if (buf_log[i].pid == 0) */
+    /*   continue; */
 
     // print clock
     char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
