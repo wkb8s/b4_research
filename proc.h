@@ -33,7 +33,16 @@ struct context {
   uint eip;
 };
 
-enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum procstate {
+  UNUSED,
+  EMBRYO,
+  SLEEPING,
+  RUNNABLE,
+  RUNNING,
+  ZOMBIE,
+  ACQUIRED,
+  RELEASED
+};
 
 // Per-process state
 struct proc {
@@ -54,6 +63,7 @@ struct proc {
   int priority;      // added
   struct proc *next; // for runqueue
   struct proc *prev; // for runqueue
+  /* int already_stolen; */
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -80,7 +90,10 @@ enum events {
   ALLOCEXIT,
   USERINIT,
   KILL,
-  SWITCH
+  SWITCH,
+
+  PTABLE_LOCK,
+  RUNQUEUE_LOCK
 };
 
 // you can enable only one of them
@@ -116,3 +129,6 @@ struct schedlog {
 // why extern?
 extern struct schedlog buf_log[LOGBUFSIZE];
 extern int buf_rest_size;
+
+extern struct clock start_clock;
+extern struct clock end_clock;

@@ -75,6 +75,10 @@ void trap(struct trapframe *tf) {
 
     // PAGEBREAK: 13
     default:
+      if (myproc() == 0) {
+        panic("trap : no proc");
+      }
+
       if (myproc() == 0 || (tf->cs & 3) == 0) {
         // In kernel, it must be our mistake.
         cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",

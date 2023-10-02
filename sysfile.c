@@ -422,10 +422,8 @@ void convert_to_hexa(unsigned int n, char *hex) {
 }
 
 // added
-// unused
 int sys_bufwrite(void) {
   yield();
-  /* printrunqueue(); */
   return 0;
 }
 
@@ -451,6 +449,20 @@ int sys_bufread(void) {
             buf_log[i].next_pstate, buf_log[i].cpu);
   }
   cprintf("\n");
+
+  // print end clock
+  char hi_hex[8 + 1], lo_hex[8 + 1];
+  cprintf("start clock : ");
+  convert_to_hexa(buf_log[1].clock.hi, hi_hex);
+  cprintf("%s", hi_hex);
+  convert_to_hexa(buf_log[1].clock.lo, lo_hex);
+  cprintf("%s\n", lo_hex);
+
+  cprintf("end   clock : ");
+  convert_to_hexa(end_clock.hi, hi_hex);
+  cprintf("%s", hi_hex);
+  convert_to_hexa(end_clock.lo, lo_hex);
+  cprintf("%s\n", lo_hex);
 
   return 0;
 }

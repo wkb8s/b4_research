@@ -5,8 +5,8 @@
 #include "fs.h"
 #include "fcntl.h"
 
-#define FORK_NUM 8
-#define CALC_NUM 8
+#define FORK_NUM 16
+#define CALC_NUM 16
 #define CALC_LOOP 100
 
 char buf[8192];
@@ -212,6 +212,8 @@ void yieldrepeat(void) {
   for (int i = 0; i < FORK_NUM; i++) {
     // if child
     if (fork() == 0) {
+      // attention :
+      // unexpected behavior happen when 'j' is too small?
       for (int j = 0; j < 500; j++) {
         calculation();
         bufwrite(); // need include yield() in sys_bufwrite()
