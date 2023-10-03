@@ -191,3 +191,9 @@ bufwrite system call で記録されたログを print する
 + 欲を出して panic する前に cprintf を挟むと, cprintf 内で trap が発生しバグ原因が特定できなくなってしまうのでやめた方が良い[教訓]
 - lock 状態の visualize
 + とりあえず ptable の lock のみ実装
+
+### 10/03
+- 安定性の改善
++ bufwrite 実行時, 高確率でクラッシュするバグを修正
++ push_rq, pop_rq 内で ptable のロックをとっていないことが原因だった
++ ptable の lock をとってしまうと, 性能が落ちてしまうので runqueue のデータ構造自体を設計しなおした方がいいかもしれない

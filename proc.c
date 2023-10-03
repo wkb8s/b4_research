@@ -137,10 +137,12 @@ struct proc *pop_rq(void) {
   }
   struct proc *head     = &rq->head;
   struct proc *p_popped = head->next;
-  head->next            = p_popped->next;
-  p_popped->next->prev  = head;
-  p_popped->next        = NULL;
-  p_popped->prev        = NULL;
+  /* acquire(&ptable.lock); */
+  head->next           = p_popped->next;
+  p_popped->next->prev = head;
+  p_popped->next       = NULL;
+  p_popped->prev       = NULL;
+  /* release(&ptable.lock); */
   rq->size--;
   /* release(&rq->lock); */
   return p_popped;
@@ -153,17 +155,19 @@ struct proc *pop_rq_arg(struct runqueue *rq) {
   }
   struct proc *head    = &rq->head;
   struct proc *p_poped = head->next;
-  head->next           = p_poped->next;
-  p_poped->next->prev  = head;
-  p_poped->next        = NULL;
-  p_poped->prev        = NULL;
+  acquire(&ptable.lock);
+  head->next          = p_poped->next;
+  p_poped->next->prev = head;
+  p_poped->next       = NULL;
+  p_poped->prev       = NULL;
+  release(&ptable.lock);
   rq->size--;
   return p_poped;
 }
 
 void push_rq(struct proc *p) {
   struct runqueue *rq = &runqueue[mycpuid()];
-  /* acquire(&rq->lock); */
+  acquire(&rq->lock);
   struct proc *head      = &rq->head;
   struct proc *tail      = rq->head.prev;
   struct proc *queue_elm = head->next;
@@ -175,11 +179,13 @@ void push_rq(struct proc *p) {
     queue_elm = queue_elm->next;
   }
   rq->size++;
+  /* acquire(&ptable.lock); */
   p->prev    = tail;
   p->next    = head;
   head->prev = p;
   tail->next = p;
-  /* release(&rq->lock); */
+  /* release(&ptable.lock); */
+  release(&rq->lock);
 }
 
 void push_rq_arg(struct runqueue *rq, struct proc *p) {
@@ -194,10 +200,12 @@ void push_rq_arg(struct runqueue *rq, struct proc *p) {
     queue_elm = queue_elm->next;
   }
   rq->size++;
+  /* acquire(&ptable.lock); */
   p->prev    = tail;
   p->next    = head;
   head->prev = p;
   tail->next = p;
+  /* release(&ptable.lock); */
 }
 
 // added
@@ -568,7 +576,7 @@ void work_steal(struct runqueue *cur_rq) {
 
   // steal process
   acquire(&steal_target->lock);
-  acquire(&cur_rq->lock);
+  /* acquire(&cur_rq->lock); */
   // steal_target may be vanished by execution
   if (steal_target->size != 0) {
     // prohibit sequential stealing
@@ -595,7 +603,7 @@ void work_steal(struct runqueue *cur_rq) {
   /* else { */
   /*   cprintf("\nstrictly speaking, it's not work conserving!\n"); */
   /* } */
-  release(&cur_rq->lock);
+  /* release(&cur_rq->lock); */
   release(&steal_target->lock);
 }
 
@@ -622,8 +630,8 @@ void scheduler(void) {
     // current runqueue is empty
     acquire(&cur_rq->lock);
     if (cur_rq->size == 0) {
-      release(&cur_rq->lock);
       work_steal(cur_rq);
+      release(&cur_rq->lock);
     }
 
     // current runqueue is not empty
@@ -762,11 +770,11 @@ void yield(void) {
 
   // enqueue
   if (IS_MULTIPLE_RUNQUEUE) {
-    /* struct runqueue *cur_rq = &runqueue[mycpuid()]; */
-    /* acquire(&cur_rq->lock); */
-    /* push_rq_arg(cur_rq, curproc); */
-    /* release(&cur_rq->lock); */
-    push_rq(curproc);
+    struct runqueue *cur_rq = &runqueue[mycpuid()];
+    acquire(&cur_rq->lock);
+    push_rq_arg(cur_rq, curproc);
+    release(&cur_rq->lock);
+    /* push_rq(curproc); */
   }
 
   curproc->state = RUNNABLE;
