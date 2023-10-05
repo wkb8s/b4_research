@@ -219,6 +219,7 @@ void yieldrepeat(void) {
         calculation();
         bufwrite(); // need include yield() in sys_bufwrite()
       }
+      exit(); // don't forget
     }
   }
 
@@ -229,6 +230,7 @@ void yieldrepeat(void) {
 
 int main(int argc, char *argv[]) {
   yieldrepeat();
+  /* calculation(); */
   /* calc_write_mix(); */
   /* fork(); */
   /* fork(); */

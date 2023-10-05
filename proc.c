@@ -199,7 +199,7 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
 
   // wait until all processes are forked
   if (finished_fork && pid != -1) {
-    /* if (!mystrcmp(pname, "bufwrite")) { */
+  /* if (!mystrcmp(pname, "bufwrite") && pid != -1) { */
     /* if (!mystrcmp(pname, "bufwrite") && ptable.proc[2].state == SLEEPING) {
      */
     cl        = rdtsc();
