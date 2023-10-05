@@ -124,7 +124,6 @@ void wakeup(void*);
 void yield(void);
 
 void boost_prio(void); // added
-struct proc* pop_rq();
 void push_rq(struct proc*);
 void runqueueinit(void);
 void printrunqueue(void);

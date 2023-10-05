@@ -424,6 +424,9 @@ void convert_to_hexa(unsigned int n, char *hex) {
 // added
 int sys_bufwrite(void) {
   yield();
+  if (myproc()->pid == 3 + 32) {
+    finished_fork = 1;
+  }
   return 0;
 }
 

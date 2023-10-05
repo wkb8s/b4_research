@@ -130,5 +130,7 @@ struct schedlog {
 extern struct schedlog buf_log[LOGBUFSIZE];
 extern int buf_rest_size;
 
+extern int finished_fork;
+
 extern struct clock start_clock;
 extern struct clock end_clock;

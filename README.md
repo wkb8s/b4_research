@@ -196,4 +196,9 @@ bufwrite system call で記録されたログを print する
 - 安定性の改善
 + bufwrite 実行時, 高確率でクラッシュするバグを修正
 + push_rq, pop_rq 内で ptable のロックをとっていないことが原因だった
-+ ptable の lock をとってしまうと, 性能が落ちてしまうので runqueue のデータ構造自体を設計しなおした方がいいかもしれない
+- runqueue データ構造の再実装
++ linked list から ring buffer に変更しようとしたが, bufwrite() 時のバグが治らず一時断念
++ ptable の lock をとってしまうと, 性能が落ちてしまうため
+- データ記録開始タイミングを, 全てのプロセスの fork が終了したタイミングに変更
+### 10/04
+- グラフに生じる謎の空白の原因調査

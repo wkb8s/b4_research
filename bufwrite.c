@@ -5,8 +5,9 @@
 #include "fs.h"
 #include "fcntl.h"
 
-#define FORK_NUM 16
-#define CALC_NUM 16
+// also need to modify sys_bufwrite() in sysfile.c
+#define FORK_NUM 32
+#define CALC_NUM 32
 #define CALC_LOOP 100
 
 char buf[8192];

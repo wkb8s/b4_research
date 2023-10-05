@@ -12,6 +12,7 @@ struct schedlog buf_log[LOGBUFSIZE];
 struct clock end_clock;
 int buf_rest_size = 0;
 int push_index;
+int finished_fork = 0;
 
 // added
 // get clock
@@ -89,8 +90,6 @@ struct runqueue {
   int size;
   struct proc head;
   struct spinlock lock;
-
-  /* int already_stole; */
 };
 
 #define MAX_CPU_NUM 100
@@ -106,8 +105,6 @@ void runqueueinit(void) {
     head->next          = head;
     head->prev          = head;
     rq->size            = 0;
-
-    /* rq->already_stole = 0; */
   }
 
   push_index = 0;
@@ -125,27 +122,6 @@ void printrunqueue(void) {
     cprintf("size %d\n", runqueue[i].size);
   }
   cprintf("\n");
-}
-
-struct proc *pop_rq(void) {
-  struct runqueue *rq = &runqueue[mycpuid()];
-  /* acquire(&rq->lock); */
-  // error check : pop empty runqueue
-  if (rq->size == 0) {
-    /* cprintf("(pid %d, rq %d) ", myproc()->pid, mycpuid()); */
-    panic("pop_rq : empty runqueue");
-  }
-  struct proc *head     = &rq->head;
-  struct proc *p_popped = head->next;
-  /* acquire(&ptable.lock); */
-  head->next           = p_popped->next;
-  p_popped->next->prev = head;
-  p_popped->next       = NULL;
-  p_popped->prev       = NULL;
-  /* release(&ptable.lock); */
-  rq->size--;
-  /* release(&rq->lock); */
-  return p_popped;
 }
 
 struct proc *pop_rq_arg(struct runqueue *rq) {
@@ -222,7 +198,8 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
   struct clock cl;
 
   // wait until all processes are forked
-  if (!mystrcmp(pname, "bufwrite")) {
+  if (finished_fork && pid != -1) {
+    /* if (!mystrcmp(pname, "bufwrite")) { */
     /* if (!mystrcmp(pname, "bufwrite") && ptable.proc[2].state == SLEEPING) {
      */
     cl        = rdtsc();
@@ -340,11 +317,11 @@ void userinit(void) {
   /* writelog(p->pid, USERINIT, p->state, RUNNABLE); */
   p->state = RUNNABLE;
 
-  /* struct runqueue *cur_rq = &runqueue[mycpuid()]; */
-  /* acquire(&cur_rq->lock); */
-  /* push_rq_arg(cur_rq, p); // don't forget to push initproc! */
-  /* release(&cur_rq->lock); */
-  push_rq(p);
+  struct runqueue *cur_rq = &runqueue[mycpuid()];
+  acquire(&cur_rq->lock);
+  push_rq_arg(cur_rq, p); // don't forget to push initproc!
+  release(&cur_rq->lock);
+  /* push_rq(p); */
 
   writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
@@ -569,41 +546,20 @@ void work_steal(struct runqueue *cur_rq) {
   if (steal_target == cur_rq)
     panic("steal itself");
 
-  /* if (steal_target->already_stole == 1) { */
-  /*   /1* cprintf("*"); *1/ */
-  /*   return; */
-  /* } */
-
   // steal process
   acquire(&steal_target->lock);
-  /* acquire(&cur_rq->lock); */
   // steal_target may be vanished by execution
   if (steal_target->size != 0) {
-    // prohibit sequential stealing
-    /* if (steal_target->head.next->already_stolen == 1) { */
-    /*   /1* cprintf("already stolen\n"); *1/ */
-    /*   release(&steal_target->lock); */
-    /*   return; */
-    /* } */
-
-    /* cur_rq->already_stole = 1; */
-
     struct proc *p_popped = pop_rq_arg(steal_target);
 
     if (p_popped == 0)
       panic("test");
 
-    /* p_popped->already_stolen = 1; */
     push_rq_arg(cur_rq, p_popped);
-    /* cprintf("steal pid:%d\n", stealid); */
-    /* printrunqueue(); */
-    /* cprintf("\n"); */
-    /* cprintf("|"); */
   }
   /* else { */
   /*   cprintf("\nstrictly speaking, it's not work conserving!\n"); */
   /* } */
-  /* release(&cur_rq->lock); */
   release(&steal_target->lock);
 }
 
@@ -645,10 +601,6 @@ void scheduler(void) {
       /* acquire(&ptable.lock); */
       p->state = RUNNING;
       /* release(&ptable.lock); */
-
-      /* acquire(&cur_rq->lock); */
-      /* cur_rq->already_stole = 0; */
-      /* release(&cur_rq->lock); */
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -864,11 +816,11 @@ static void wakeup1(void *chan) {
 
       // enqueue
       if (IS_MULTIPLE_RUNQUEUE) {
-        /* struct runqueue *cur_rq = &runqueue[mycpuid()]; */
-        /* acquire(&cur_rq->lock); */
-        /* push_rq_arg(cur_rq, p); */
-        /* release(&cur_rq->lock); */
-        push_rq(p);
+        struct runqueue *cur_rq = &runqueue[mycpuid()];
+        acquire(&cur_rq->lock);
+        push_rq_arg(cur_rq, p);
+        release(&cur_rq->lock);
+        /* push_rq(p); */
       }
 
       p->state = RUNNABLE;
