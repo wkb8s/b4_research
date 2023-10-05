@@ -198,8 +198,8 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
   struct clock cl;
 
   // wait until all processes are forked
-  if (finished_fork && pid != -1) {
-  /* if (!mystrcmp(pname, "bufwrite") && pid != -1) { */
+  /* if (finished_fork && pid != -1) { */
+    if (!mystrcmp(pname, "bufwrite") && pid != -1) {
     /* if (!mystrcmp(pname, "bufwrite") && ptable.proc[2].state == SLEEPING) {
      */
     cl        = rdtsc();
@@ -384,13 +384,32 @@ int fork(void) {
 
   // enqueue
   if (IS_MULTIPLE_RUNQUEUE) {
+    // seek small runqueue
+    // !: not always ensured
+    struct runqueue *target = NULL;
+    int min_rqsize          = NPROC;
+    for (int i = 0; i < ncpu; i++) {
+      struct runqueue *rq = &runqueue[i];
+      if (rq->size < min_rqsize) {
+        target     = rq;
+        min_rqsize = rq->size;
+      }
+    }
+    if (target == NULL)
+      panic("target not exist");
+
+    acquire(&target->lock);
+    push_rq_arg(target, np);
+    release(&target->lock);
+
     /* acquire(&runqueue[0].lock); */
     /* push_rq_arg(&runqueue[0], np); */
     /* release(&runqueue[0].lock); */
-    acquire(&runqueue[push_index % ncpu].lock);
-    push_rq_arg(&runqueue[push_index % ncpu], np);
-    release(&runqueue[push_index % ncpu].lock);
-    push_index++;
+
+    /* acquire(&runqueue[push_index % ncpu].lock); */
+    /* push_rq_arg(&runqueue[push_index % ncpu], np); */
+    /* release(&runqueue[push_index % ncpu].lock); */
+    /* push_index++; */
   }
 
   writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
