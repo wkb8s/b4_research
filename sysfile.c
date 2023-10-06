@@ -433,14 +433,14 @@ int sys_bufwrite(void) {
 // added
 int sys_bufread(void) {
   cprintf("clock,pid,pname,event_name,pstate_prev,pstate_next,cpu\n");
+  char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
 
-  for (int i = 0; i < LOGBUFSIZE; i++) {
+  for (int i = 2; i < LOGBUFSIZE; i++) {
     // temporal
     /* if (buf_log[i].pid == 0) */
     /*   continue; */
 
     // print clock
-    char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
     convert_to_hexa(buf_log[i].clock.hi, hi_hex);
     cprintf("%s", hi_hex);
     convert_to_hexa(buf_log[i].clock.lo, lo_hex);
@@ -453,9 +453,33 @@ int sys_bufread(void) {
   }
   cprintf("\n");
 
-  // print end clock
-  char hi_hex[8 + 1], lo_hex[8 + 1];
-  cprintf("start clock : ");
+  // print scheduling clock
+  cprintf("pid,fork,run,exit\n");
+  for (int i = 0; i < NPROC; i++) {
+    // pid
+    cprintf("%d,", i);
+
+    // fork
+    convert_to_hexa(clock_log[i][0].hi, hi_hex);
+    cprintf("%s", hi_hex);
+    convert_to_hexa(clock_log[i][0].lo, lo_hex);
+    cprintf("%s,", lo_hex);
+
+    // first running
+    convert_to_hexa(clock_log[i][1].hi, hi_hex);
+    cprintf("%s", hi_hex);
+    convert_to_hexa(clock_log[i][1].lo, lo_hex);
+    cprintf("%s,", lo_hex);
+
+    // exit
+    convert_to_hexa(clock_log[i][2].hi, hi_hex);
+    cprintf("%s", hi_hex);
+    convert_to_hexa(clock_log[i][2].lo, lo_hex);
+    cprintf("%s\n", lo_hex);
+  }
+
+  // print start and end clock
+  cprintf("\nstart clock : ");
   convert_to_hexa(buf_log[1].clock.hi, hi_hex);
   cprintf("%s", hi_hex);
   convert_to_hexa(buf_log[1].clock.lo, lo_hex);
@@ -467,5 +491,6 @@ int sys_bufread(void) {
   convert_to_hexa(end_clock.lo, lo_hex);
   cprintf("%s\n", lo_hex);
 
+  cprintf("\n", lo_hex);
   return 0;
 }

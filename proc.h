@@ -132,5 +132,8 @@ extern int buf_rest_size;
 
 extern int finished_fork;
 
+extern struct clock clock_log[NPROC][3];
+extern int isnot_first_running[NPROC];
+
 extern struct clock start_clock;
 extern struct clock end_clock;

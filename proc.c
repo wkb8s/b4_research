@@ -9,7 +9,9 @@
 
 // added
 struct schedlog buf_log[LOGBUFSIZE];
+struct clock clock_log[NPROC][3];
 struct clock end_clock;
+int isnot_first_running[NPROC];
 int buf_rest_size = 0;
 int push_index;
 int finished_fork = 0;
@@ -199,7 +201,7 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
 
   // wait until all processes are forked
   /* if (finished_fork && pid != -1) { */
-    if (!mystrcmp(pname, "bufwrite") && pid != -1) {
+  if (!mystrcmp(pname, "bufwrite") && pid != -1) {
     /* if (!mystrcmp(pname, "bufwrite") && ptable.proc[2].state == SLEEPING) {
      */
     cl        = rdtsc();
@@ -412,6 +414,8 @@ int fork(void) {
     /* push_index++; */
   }
 
+  clock_log[np->pid][0] = rdtsc();
+
   writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
 
@@ -463,6 +467,8 @@ void exit(void) {
         wakeup1(initproc);
     }
   }
+
+  clock_log[curproc->pid][2] = rdtsc();
 
   // added
   writelog(curproc->pid, curproc->name, EXIT, curproc->state, ZOMBIE);
@@ -613,9 +619,14 @@ void scheduler(void) {
     else {
       p = pop_rq_arg(cur_rq);
       release(&cur_rq->lock);
-
       c->proc = p;
       switchuvm(p);
+
+      if (isnot_first_running[p->pid] == 0) {
+        clock_log[p->pid][1]        = rdtsc();
+        isnot_first_running[p->pid] = 1;
+      }
+
       writelog(p->pid, p->name, TICK, p->state, RUNNING);
       /* acquire(&ptable.lock); */
       p->state = RUNNING;
@@ -676,6 +687,12 @@ void scheduler(void) {
       if (p->state == RUNNABLE) {
         c->proc = p;
         switchuvm(p);
+
+      if (isnot_first_running[p->pid] == 0) {
+        clock_log[p->pid][1]        = rdtsc();
+        isnot_first_running[p->pid] = 1;
+      }
+
         writelog(p->pid, p->name, TICK, p->state, RUNNING);
         p->state = RUNNING;
         swtch(&(c->scheduler), p->context);

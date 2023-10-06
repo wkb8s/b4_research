@@ -211,3 +211,7 @@ bufwrite system call で記録されたログを print する
 + push_rq_arg を ptable のロックを確保した上で呼び出すように修正
 + bufwrite 時の exit 忘れを修正
 + クラッシュは減ったが, デッドロックは改善されていない
+
+### 10/06
+- response time, turn around time の出力をサポート
++ fork 直後, running 時, exit 時に記録した clock から計算する
