@@ -200,8 +200,8 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
   struct clock cl;
 
   // wait until all processes are forked
-  /* if (finished_fork && pid != -1) { */
-  if (!mystrcmp(pname, "bufwrite") && pid != -1) {
+  if (finished_fork && !mystrcmp(pname, "bufwrite") && pid != -1) {
+    /* if (!mystrcmp(pname, "bufwrite") && pid != -1) { */
     /* if (!mystrcmp(pname, "bufwrite") && ptable.proc[2].state == SLEEPING) {
      */
     cl        = rdtsc();
@@ -688,10 +688,10 @@ void scheduler(void) {
         c->proc = p;
         switchuvm(p);
 
-      if (isnot_first_running[p->pid] == 0) {
-        clock_log[p->pid][1]        = rdtsc();
-        isnot_first_running[p->pid] = 1;
-      }
+        if (isnot_first_running[p->pid] == 0) {
+          clock_log[p->pid][1]        = rdtsc();
+          isnot_first_running[p->pid] = 1;
+        }
 
         writelog(p->pid, p->name, TICK, p->state, RUNNING);
         p->state = RUNNING;

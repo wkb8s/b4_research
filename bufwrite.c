@@ -213,8 +213,10 @@ void yieldrepeat(void) {
   for (int i = 0; i < FORK_NUM; i++) {
     // if child
     if (fork() == 0) {
-      // attention :
-      // unexpected behavior happen when 'j' is too small?
+      // wait until all processes are forked
+      waitfork();
+
+      /* calculation(); */
       for (int j = 0; j < 500; j++) {
         calculation();
         bufwrite(); // need include yield() in sys_bufwrite()

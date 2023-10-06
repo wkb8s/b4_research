@@ -25,6 +25,7 @@ int sleep(int);
 int uptime(void);
 int bufwrite(void); // added
 int bufread(void); // added
+int waitfork(void); // added
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -22,3 +22,4 @@
 #define SYS_close 21
 #define SYS_bufwrite 22 // added
 #define SYS_bufread 23 // added
+#define SYS_waitfork 24 // added

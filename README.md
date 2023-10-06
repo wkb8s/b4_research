@@ -215,3 +215,5 @@ bufwrite system call で記録されたログを print する
 ### 10/06
 - response time, turn around time の出力をサポート
 + fork 直後, running 時, exit 時に記録した clock から計算する
+- fork が全て終了してから各プロセスが計算を実行するように修正
++ fork が全て終了するまで wait するシステムコール waitfork() を追加

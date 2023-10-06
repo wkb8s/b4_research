@@ -185,6 +185,7 @@ UPROGS=\
 	_hello\
 	_bufwrite\
 	_bufread\
+  _waitfork\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

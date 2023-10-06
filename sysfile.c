@@ -424,8 +424,15 @@ void convert_to_hexa(unsigned int n, char *hex) {
 // added
 int sys_bufwrite(void) {
   yield();
-  if (myproc()->pid == 3 + 32) {
+  return 0;
+}
+
+int sys_waitfork(void) {
+  if (myproc()->pid == 3 + 8) {
     finished_fork = 1;
+  }
+  while (finished_fork == 0) {
+    yield();
   }
   return 0;
 }
@@ -435,11 +442,7 @@ int sys_bufread(void) {
   cprintf("clock,pid,pname,event_name,pstate_prev,pstate_next,cpu\n");
   char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
 
-  for (int i = 2; i < LOGBUFSIZE; i++) {
-    // temporal
-    /* if (buf_log[i].pid == 0) */
-    /*   continue; */
-
+  for (int i = 0; i < LOGBUFSIZE; i++) {
     // print clock
     convert_to_hexa(buf_log[i].clock.hi, hi_hex);
     cprintf("%s", hi_hex);
