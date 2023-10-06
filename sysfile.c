@@ -428,7 +428,7 @@ int sys_bufwrite(void) {
 }
 
 int sys_waitfork(void) {
-  if (myproc()->pid == 3 + 8) {
+  if (myproc()->pid == 3 + 32) {
     finished_fork = 1;
   }
   while (finished_fork == 0) {
