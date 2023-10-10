@@ -217,3 +217,11 @@ bufwrite system call で記録されたログを print する
 + fork 直後, running 時, exit 時に記録した clock から計算する
 - fork が全て終了してから各プロセスが計算を実行するように修正
 + fork が全て終了するまで wait するシステムコール waitfork() を追加
+- 空白が再び生じてしまっている
+
+### 10/10
+- プロセス数の上限を増やした際の response time, turn around time の影響を測定
++ NPROC 100 → 10000 のとき, response time は 両者ともに x1.5, turn around time は round robin の方が長くなった
++ NPROC = 10000 程度では実行時間に大きな影響が見られないため, さらに値を大きくしたい
++ が, 起動しなくなってしまう (メモリ領域が足りなくなるため？)
+- multiple runqueue 時に, calculation の実行時間にばらつきが見られる原因を調査

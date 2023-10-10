@@ -224,6 +224,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 ifndef CPUS
 
 # CPU NUM
+# also need to modify 'NCPU' in param.h
 CPUS := 8
 
 endif

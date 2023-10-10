@@ -442,14 +442,15 @@ int sys_bufread(void) {
   cprintf("clock,pid,pname,event_name,pstate_prev,pstate_next,cpu\n");
   char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
 
+  // print event log
   for (int i = 0; i < LOGBUFSIZE; i++) {
-    // print clock
+    // clock
     convert_to_hexa(buf_log[i].clock.hi, hi_hex);
     cprintf("%s", hi_hex);
     convert_to_hexa(buf_log[i].clock.lo, lo_hex);
     cprintf("%s,", lo_hex);
 
-    // print other elements
+    // other elements
     cprintf("%d,%s,%d,%d,%d,%d\n", buf_log[i].pid, buf_log[i].name,
             buf_log[i].event_name, buf_log[i].prev_pstate,
             buf_log[i].next_pstate, buf_log[i].cpu);
@@ -458,7 +459,7 @@ int sys_bufread(void) {
 
   // print scheduling clock
   cprintf("pid,fork,run,exit\n");
-  for (int i = 0; i < NPROC; i++) {
+  for (int i = 0; i < 64; i++) {
     // pid
     cprintf("%d,", i);
 
