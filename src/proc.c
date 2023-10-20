@@ -7,12 +7,16 @@
 #include "proc.h"
 #include "spinlock.h"
 
-struct schedlog buf_log[LOGBUFSIZE];
+struct schedlog buf_log[LOG_SIZE];
 struct clock clock_log[NPROC][3];
 struct clock end_clock;
 int isnot_first_running[NPROC];
-int buf_rest_size = 0;
 int finished_fork = 0;
+
+struct {
+  struct spinlock lock;
+  int value;
+} bufsize;
 
 struct {
   struct spinlock lock;
@@ -99,6 +103,8 @@ void runqueueinit(void) {
     head->prev          = head;
     rq->size            = 0;
   }
+
+  bufsize.value = 0;
 }
 
 // Must be called with rq->lock
@@ -155,19 +161,23 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
     cl        = rdtsc();
     end_clock = cl;
 
-    if (buf_rest_size <= 0)
+    acquire(&bufsize.lock);
+    if (bufsize.value >= LOG_SIZE) {
+      release(&bufsize.lock);
       return;
-
-    buf_rest_size--;
-    buf_log[LOGBUFSIZE - buf_rest_size].clock = cl;
-    buf_log[LOGBUFSIZE - buf_rest_size].pid   = pid;
-    for (int i = 0; i < 16; i++) {
-      buf_log[LOGBUFSIZE - buf_rest_size].name[i] = pname[i];
     }
-    buf_log[LOGBUFSIZE - buf_rest_size].event_name  = event_name;
-    buf_log[LOGBUFSIZE - buf_rest_size].prev_pstate = prev_pstate;
-    buf_log[LOGBUFSIZE - buf_rest_size].next_pstate = next_pstate;
-    buf_log[LOGBUFSIZE - buf_rest_size].cpu         = mycpuid();
+    bufsize.value++;
+
+    buf_log[bufsize.value].clock = cl;
+    buf_log[bufsize.value].pid   = pid;
+    for (int i = 0; i < 16; i++) {
+      buf_log[bufsize.value].name[i] = pname[i];
+    }
+    buf_log[bufsize.value].event_name  = event_name;
+    buf_log[bufsize.value].prev_pstate = prev_pstate;
+    buf_log[bufsize.value].next_pstate = next_pstate;
+    buf_log[bufsize.value].cpu         = mycpuid();
+    release(&bufsize.lock);
   }
 }
 
@@ -256,8 +266,6 @@ void userinit(void) {
   writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
 
-  // added
-  /* writelog(p->pid, USERINIT, p->state, RUNNABLE); */
   p->state = RUNNABLE;
 
   struct runqueue *cur_rq = &runqueue[mycpuid()];

@@ -1,6 +1,6 @@
 // you can enable only one of them
-#define IS_MULTIPLE_RUNQUEUE 0
-#define IS_ROUNDROBIN 1
+#define IS_MULTIPLE_RUNQUEUE 1
+#define IS_ROUNDROBIN 0
 
 // Per-CPU state
 struct cpu {
@@ -100,8 +100,7 @@ struct schedlog {
   int cpu;
 };
 
-extern struct schedlog buf_log[LOGBUFSIZE];
-extern int buf_rest_size;
+extern struct schedlog buf_log[LOG_SIZE];
 extern int finished_fork;
 extern struct clock clock_log[NPROC][3];
 extern int isnot_first_running[NPROC];

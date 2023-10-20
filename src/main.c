@@ -36,8 +36,6 @@ int main(void) {
   runqueueinit(); // added : need to place before userinit()
   userinit();     // first user process
 
-  buf_rest_size = LOGBUFSIZE; // added
-
   mpmain(); // finish this processor's setup
 }
 

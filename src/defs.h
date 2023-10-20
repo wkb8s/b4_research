@@ -9,8 +9,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
-
-struct runqueue; // why???
+struct runqueue;
 
 // bio.c
 void binit(void);
@@ -122,8 +121,6 @@ void userinit(void);
 int wait(void);
 void wakeup(void*);
 void yield(void);
-
-void push_rq(struct proc*);
 void runqueueinit(void);
 
 // swtch.S

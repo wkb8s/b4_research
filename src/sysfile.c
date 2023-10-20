@@ -421,7 +421,6 @@ void convert_to_hexa(unsigned int n, char *hex) {
   hex[8] = '\0';
 }
 
-// added
 int sys_bufwrite(void) {
   yield();
   return 0;
@@ -443,7 +442,7 @@ int sys_bufread(void) {
   char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
 
   // print event log
-  for (int i = 0; i < LOGBUFSIZE; i++) {
+  for (int i = 0; i < LOG_SIZE; i++) {
     // clock
     convert_to_hexa(buf_log[i].clock.hi, hi_hex);
     cprintf("%s", hi_hex);
