@@ -100,9 +100,6 @@ struct schedlog {
   int cpu;
 };
 
-extern struct schedlog buf_log[LOG_SIZE];
 extern int finished_fork;
+extern struct schedlog buf_log[LOG_SIZE];
 extern struct clock clock_log[NPROC][3];
-extern int isnot_first_running[NPROC];
-extern struct clock start_clock;
-extern struct clock end_clock;

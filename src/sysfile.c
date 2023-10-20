@@ -481,19 +481,6 @@ int sys_bufread(void) {
     cprintf("%s\n", lo_hex);
   }
 
-  // print start and end clock
-  cprintf("\nstart clock : ");
-  convert_to_hexa(buf_log[1].clock.hi, hi_hex);
-  cprintf("%s", hi_hex);
-  convert_to_hexa(buf_log[1].clock.lo, lo_hex);
-  cprintf("%s\n", lo_hex);
-
-  cprintf("end   clock : ");
-  convert_to_hexa(end_clock.hi, hi_hex);
-  cprintf("%s", hi_hex);
-  convert_to_hexa(end_clock.lo, lo_hex);
-  cprintf("%s\n", lo_hex);
-
-  cprintf("\n", lo_hex);
+  cprintf("\n");
   return 0;
 }

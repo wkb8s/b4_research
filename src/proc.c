@@ -7,11 +7,15 @@
 #include "proc.h"
 #include "spinlock.h"
 
+int nextpid = 1;
+int finished_fork = 0;
 struct schedlog buf_log[LOG_SIZE];
 struct clock clock_log[NPROC][3];
-struct clock end_clock;
-int isnot_first_running[NPROC];
-int finished_fork = 0;
+
+struct {
+  struct spinlock lock;
+  int value[NPROC];
+} is_first_running;
 
 struct {
   struct spinlock lock;
@@ -31,10 +35,8 @@ struct runqueue {
 
 struct runqueue runqueue[NCPU];
 struct proc head[NCPU];
-
 static struct proc *initproc;
 
-int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
 static void wakeup1(void *chan);
@@ -104,6 +106,9 @@ void runqueueinit(void) {
     rq->size            = 0;
   }
 
+  for (int i = 0; i < NPROC; i++)
+    is_first_running.value[i] = 1;
+
   bufsize.value = 0;
 }
 
@@ -154,31 +159,27 @@ int mystrcmp(const char *p, const char *q) {
 // added
 void writelog(int pid, char *pname, char event_name, int prev_pstate,
               int next_pstate) {
-  struct clock cl;
+  if (!finished_fork || mystrcmp(pname, "bufwrite") || pid == -1)
+    /* if (!mystrcmp(pname, "bufwrite") && pid != -1) */
+    return;
 
-  if (finished_fork && !mystrcmp(pname, "bufwrite") && pid != -1) {
-    /* if (!mystrcmp(pname, "bufwrite") && pid != -1) { */
-    cl        = rdtsc();
-    end_clock = cl;
-
-    acquire(&bufsize.lock);
-    if (bufsize.value >= LOG_SIZE) {
-      release(&bufsize.lock);
-      return;
-    }
-    bufsize.value++;
-
-    buf_log[bufsize.value].clock = cl;
-    buf_log[bufsize.value].pid   = pid;
-    for (int i = 0; i < 16; i++) {
-      buf_log[bufsize.value].name[i] = pname[i];
-    }
-    buf_log[bufsize.value].event_name  = event_name;
-    buf_log[bufsize.value].prev_pstate = prev_pstate;
-    buf_log[bufsize.value].next_pstate = next_pstate;
-    buf_log[bufsize.value].cpu         = mycpuid();
+  acquire(&bufsize.lock);
+  if (bufsize.value >= LOG_SIZE) {
     release(&bufsize.lock);
+    return;
   }
+
+  bufsize.value++;
+  buf_log[bufsize.value].clock = rdtsc();
+  buf_log[bufsize.value].pid   = pid;
+  for (int i = 0; i < 16; i++) {
+    buf_log[bufsize.value].name[i] = pname[i];
+  }
+  buf_log[bufsize.value].event_name  = event_name;
+  buf_log[bufsize.value].prev_pstate = prev_pstate;
+  buf_log[bufsize.value].next_pstate = next_pstate;
+  buf_log[bufsize.value].cpu         = mycpuid();
+  release(&bufsize.lock);
 }
 
 // PAGEBREAK: 32
@@ -539,10 +540,12 @@ void scheduler(void) {
       c->proc = p;
       switchuvm(p);
 
-      if (isnot_first_running[p->pid] == 0) {
-        clock_log[p->pid][1]        = rdtsc();
-        isnot_first_running[p->pid] = 1;
+      acquire(&is_first_running.lock);
+      if (is_first_running.value[p->pid]) {
+        clock_log[p->pid][1]           = rdtsc();
+        is_first_running.value[p->pid] = 0;
       }
+      release(&is_first_running.lock);
 
       writelog(p->pid, p->name, TICK, p->state, RUNNING);
       /* acquire(&ptable.lock); */
@@ -567,10 +570,12 @@ void scheduler(void) {
         c->proc = p;
         switchuvm(p);
 
-        if (isnot_first_running[p->pid] == 0) {
-          clock_log[p->pid][1]        = rdtsc();
-          isnot_first_running[p->pid] = 1;
+        acquire(&is_first_running.lock);
+        if (is_first_running.value[p->pid]) {
+          clock_log[p->pid][1]           = rdtsc();
+          is_first_running.value[p->pid] = 0;
         }
+        release(&is_first_running.lock);
 
         writelog(p->pid, p->name, TICK, p->state, RUNNING);
         p->state = RUNNING;
