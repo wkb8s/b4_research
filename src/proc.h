@@ -1,5 +1,8 @@
+// you can enable only one of them
+#define IS_MULTIPLE_RUNQUEUE 0
+#define IS_ROUNDROBIN 1
+
 // Per-CPU state
-#include <stdint.h>
 struct cpu {
   uchar apicid;              // Local APIC ID
   struct context *scheduler; // swtch() here to enter scheduler
@@ -59,11 +62,8 @@ struct proc {
   struct file *ofile[NOFILE]; // Open files
   struct inode *cwd;          // Current directory
   char name[16];              // Process name (debugging)
-
-  int priority;      // added
-  struct proc *next; // for runqueue
-  struct proc *prev; // for runqueue
-  /* int already_stolen; */
+  struct proc *next;          // for runqueue
+  struct proc *prev;          // for runqueue
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -72,7 +72,6 @@ struct proc {
 //   fixed-size stack
 //   expandable heap
 
-// added
 struct clock {
   unsigned int hi;
   unsigned int lo;
@@ -87,53 +86,24 @@ enum events {
   EXIT,
   WAIT,
   SLEEP,
-  ALLOCEXIT,
-  USERINIT,
-  KILL,
-  SWITCH,
-
   PTABLE_LOCK,
   RUNQUEUE_LOCK
 };
 
-// you can enable only one of them
-#define IS_MLFQ 0
-#define IS_MULTIPLE_RUNQUEUE 0
-#define IS_ROUNDROBIN 1
-
-#define IS_BOOST_PRIORITY 0
-#define MAX_PRIO 100
-
 struct schedlog {
   struct clock clock;
   int pid;
-
   char name[16];
-
-  // events
-  // 0:ALLOCPROC, 1:WAKEUP, 2:YIELD, 3:FORK, 4:TICK, 5:EXIT, 6:WAIT, 7:SLEEP,
-  //
-  // unnecessary?
-  // 8:ALLOCEXIT(?), 9:USERINIT(?), 10:KILL(?), 11:SWITCH
   int event_name;
-
-  // pstate
-  // any of 'enum procstate'
-  // 0:UNUSED, 1:EMBRYO, 2:SLEEPING, 3:RUNNABLE, 4:RUNNING, 5:ZOMBIE
   int prev_pstate;
   int next_pstate;
   int cpu;
-  /* int cpu_to; */
 };
 
-// why extern?
 extern struct schedlog buf_log[LOGBUFSIZE];
 extern int buf_rest_size;
-
 extern int finished_fork;
-
 extern struct clock clock_log[NPROC][3];
 extern int isnot_first_running[NPROC];
-
 extern struct clock start_clock;
 extern struct clock end_clock;
