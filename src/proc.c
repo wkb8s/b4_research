@@ -7,7 +7,7 @@
 #include "proc.h"
 #include "spinlock.h"
 
-int nextpid = 1;
+int nextpid       = 1;
 int finished_fork = 0;
 struct schedlog buf_log[LOG_SIZE];
 struct clock clock_log[NPROC][3];
@@ -192,13 +192,12 @@ static struct proc *allocproc(void) {
   char *sp;
 
   acquire(&ptable.lock);
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
+  /* writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED); */
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == UNUSED)
       goto found;
 
-  writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
   return 0;
 
@@ -208,7 +207,6 @@ found:
   writelog(p->pid, p->name, ALLOCPROC, p->state, EMBRYO);
   p->state = EMBRYO;
 
-  writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -264,7 +262,6 @@ void userinit(void) {
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
@@ -274,7 +271,6 @@ void userinit(void) {
   enqueue(cur_rq, p); // don't forget to push initproc!
   release(&cur_rq->lock);
 
-  writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
 }
 
@@ -356,13 +352,11 @@ int fork(void) {
 
   clock_log[np->pid][0] = rdtsc();
 
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
 
   writelog(np->pid, np->name, FORK, np->state, RUNNABLE);
   np->state = RUNNABLE;
 
-  writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
 
   return pid;
@@ -392,7 +386,6 @@ void exit(void) {
   end_op();
   curproc->cwd = 0;
 
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
 
   // Parent might be sleeping in wait().
@@ -424,7 +417,6 @@ int wait(void) {
   int havekids, pid;
   struct proc *curproc = myproc();
 
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
   for (;;) {
     // Scan through table looking for exited children.
@@ -442,9 +434,8 @@ int wait(void) {
         kfree(p->kstack);
         p->kstack = 0;
         freevm(p->pgdir);
-        p->pid    = 0;
-        p->parent = 0;
-        writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
+        p->pid     = 0;
+        p->parent  = 0;
         p->name[0] = 0;
         p->killed  = 0;
         p->state   = UNUSED;
@@ -455,7 +446,6 @@ int wait(void) {
 
     // No point waiting if we don't have any children.
     if (!havekids || curproc->killed) {
-      writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
       release(&ptable.lock);
       return -1;
     }
@@ -482,13 +472,11 @@ void work_steal(struct runqueue *cur_rq) {
     }
   }
 
-  if (steal_target == NULL) {
+  if (steal_target == NULL)
     return;
-  }
 
-  if (stealid == 0) {
+  if (stealid == 0)
     return;
-  }
 
   if (steal_target == cur_rq)
     panic("steal itself");
@@ -547,12 +535,11 @@ void scheduler(void) {
       }
       release(&is_first_running.lock);
 
+      acquire(&ptable.lock); // must place before writelog()
       writelog(p->pid, p->name, TICK, p->state, RUNNING);
-      /* acquire(&ptable.lock); */
       p->state = RUNNING;
-      /* release(&ptable.lock); */
-
       swtch(&(c->scheduler), p->context);
+      release(&ptable.lock);
       switchkvm();
       c->proc = 0;
     }
@@ -563,7 +550,6 @@ void scheduler(void) {
     // Enable interrupts on this processor.
     sti();
     // Loop over process table looking for process to run.
-    writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
     acquire(&ptable.lock);
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
       if (p->state == RUNNABLE) {
@@ -585,7 +571,6 @@ void scheduler(void) {
         c->proc = 0; // no process is executed in current CPU
       }
     }
-    writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
     release(&ptable.lock);
   }
 }
@@ -611,18 +596,8 @@ void sched(void) {
     panic("sched interruptible");
   intena = mycpu()->intena;
 
-  if (IS_MULTIPLE_RUNQUEUE) {
-    struct cpu *curcpu = mycpu();
-    writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
-    release(&ptable.lock);
-    swtch(&p->context, curcpu->scheduler);
-    writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
-    acquire(&ptable.lock);
-    curcpu->intena = intena;
-  } else {
-    swtch(&p->context, mycpu()->scheduler);
-    mycpu()->intena = intena;
-  }
+  swtch(&p->context, mycpu()->scheduler);
+  mycpu()->intena = intena;
 }
 
 // Give up the CPU for one scheduling round.
@@ -631,7 +606,6 @@ void yield(void) {
 
   writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE);
 
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock); // DOC: yieldlock
 
   // enqueue
@@ -645,7 +619,6 @@ void yield(void) {
   curproc->state = RUNNABLE;
 
   sched();
-  writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
 }
 
@@ -655,10 +628,12 @@ void forkret(void) {
   static int first = 1;
   // Still holding ptable.lock from scheduler.
 
-  if (!IS_MULTIPLE_RUNQUEUE) {
-    writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
-    release(&ptable.lock);
-  }
+  /* if (!IS_MULTIPLE_RUNQUEUE) { */
+  /*   release(&ptable.lock); */
+  /* } */
+
+  // here
+  release(&ptable.lock);
 
   if (first) {
     // Some initialization functions must be run in the context
@@ -690,8 +665,7 @@ void sleep(void *chan, struct spinlock *lk) {
   // (wakeup runs with ptable.lock locked),
   // so it's okay to release lk.
   if (lk != &ptable.lock) { // DOC: sleeplock0
-    writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
-    acquire(&ptable.lock); // DOC: sleeplock1
+    acquire(&ptable.lock);  // DOC: sleeplock1
     release(lk);
   }
   // Go to sleep.
@@ -708,7 +682,6 @@ void sleep(void *chan, struct spinlock *lk) {
 
   // Reacquire original lock.
   if (lk != &ptable.lock) { // DOC: sleeplock2
-    writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
     release(&ptable.lock);
     acquire(lk);
   }
@@ -743,10 +716,8 @@ void wakeup(void *chan) {
   if (holding(&ptable.lock))
     panic("already locked!\n");
 
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
   wakeup1(chan);
-  writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
 }
 
@@ -756,7 +727,6 @@ void wakeup(void *chan) {
 int kill(int pid) {
   struct proc *p;
 
-  writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED);
   acquire(&ptable.lock);
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if (p->pid == pid) {
@@ -765,12 +735,10 @@ int kill(int pid) {
       if (p->state == SLEEPING) {
         p->state = RUNNABLE;
       }
-      writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
       release(&ptable.lock);
       return 0;
     }
   }
-  writelog(-1, "test", PTABLE_LOCK, ACQUIRED, RELEASED);
   release(&ptable.lock);
   return -1;
 }
