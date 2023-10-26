@@ -110,6 +110,9 @@ void runqueueinit(void) {
     is_first_running.value[i] = 1;
 
   bufsize.value = 0;
+
+  for (int i = 0; i < LOG_SIZE; i++)
+    buf_log[i].pid = 0;
 }
 
 // Must be called with rq->lock
@@ -171,7 +174,7 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
 
   bufsize.value++;
   buf_log[bufsize.value].clock = rdtsc();
-  buf_log[bufsize.value].pid   = pid;
+
   for (int i = 0; i < 16; i++) {
     buf_log[bufsize.value].name[i] = pname[i];
   }
@@ -179,6 +182,12 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
   buf_log[bufsize.value].prev_pstate = prev_pstate;
   buf_log[bufsize.value].next_pstate = next_pstate;
   buf_log[bufsize.value].cpu         = mycpuid();
+  if (buf_log[bufsize.value].pid != 0) {
+    cprintf("wrote buf[%d]\n", bufsize.value);
+    cprintf("written : %d\n", buf_log[bufsize.value].pid);
+    panic("overwritten!");
+  }
+  buf_log[bufsize.value].pid = pid;
   release(&bufsize.lock);
 }
 
