@@ -7,8 +7,11 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#define RQ_SIZE 100
+
 int nextpid       = 1;
 int finished_fork = 0;
+struct proc noproc;
 struct schedlog buf_log[LOG_SIZE];
 struct clock clock_log[NPROC][3];
 
@@ -29,12 +32,13 @@ struct {
 
 struct runqueue {
   int size;
-  struct proc head;
+  int index_head;
+  int index_tail;
+  struct proc *content[RQ_SIZE];
   struct spinlock lock;
 };
 
 struct runqueue runqueue[NCPU];
-struct proc head[NCPU];
 static struct proc *initproc;
 
 extern void forkret(void);
@@ -99,11 +103,11 @@ int mycpuid(void) {
 void runqueueinit(void) {
   for (int i = 0; i < ncpu; i++) {
     struct runqueue *rq = &runqueue[i];
-    struct proc *head   = &rq->head;
-    head->pid           = (-1) * (i + 1);
-    head->next          = head;
-    head->prev          = head;
     rq->size            = 0;
+    rq->index_head      = 0;
+    rq->index_tail      = 0;
+    for (int j = 0; j < RQ_SIZE; j++)
+      rq->content[j] = &noproc;
   }
 
   for (int i = 0; i < NPROC; i++)
@@ -117,38 +121,30 @@ void runqueueinit(void) {
 
 // Must be called with rq->lock
 struct proc *dequeue(struct runqueue *rq) {
-  if (rq->size == 0) {
+  if (!holding(&rq->lock))
+    panic("dequeue : no lock");
+  if (rq->size <= 0)
     panic("dequeue : empty runqueue");
-  }
-  struct proc *head    = &rq->head;
-  struct proc *p_poped = head->next;
-  acquire(&ptable.lock);
-  head->next          = p_poped->next;
-  p_poped->next->prev = head;
-  p_poped->next       = NULL;
-  p_poped->prev       = NULL;
-  release(&ptable.lock);
+  if (rq->content[rq->index_head] == &noproc)
+    panic("dequeue : no process");
+
   rq->size--;
-  return p_poped;
+  struct proc *dequeued            = rq->content[rq->index_head];
+  rq->content[rq->index_head] = &noproc;
+  rq->index_head++;
+  rq->index_head %= RQ_SIZE;
+  return dequeued;
 }
 
-// Must be called with ptable.lock and rq->lock
+// Must be called with rq->lock
 void enqueue(struct runqueue *rq, struct proc *p) {
-  struct proc *head      = &rq->head;
-  struct proc *tail      = rq->head.prev;
-  struct proc *queue_elm = head->next;
-  while (queue_elm != head) {
-    if (queue_elm->pid == p->pid) {
-      panic("push same pid");
-      return;
-    }
-    queue_elm = queue_elm->next;
-  }
+  if (!holding(&rq->lock))
+    panic("enqueue : no lock");
+  if (rq->content[rq->index_tail] == p)
+    panic("enqueue : enqueue same process");
+
   rq->size++;
-  p->prev    = tail;
-  p->next    = head;
-  head->prev = p;
-  tail->next = p;
+  rq->content[rq->index_tail++ % RQ_SIZE] = p;
 }
 
 // added
