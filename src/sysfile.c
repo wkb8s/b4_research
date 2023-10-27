@@ -407,18 +407,19 @@ int sys_pipe(void) {
   return 0;
 }
 
-// added
-void convert_to_hexa(unsigned int n, char *hex) {
+void print_in_hex(unsigned int n) {
+  char buf[8 + 1]; // last character is '\0'
   for (int i = 0; i < 8; i++) {
     unsigned int digit = n % 16;
     n /= 16;
     if (digit < 10) {
-      hex[7 - i] = '0' + digit;
+      buf[7 - i] = '0' + digit;
     } else {
-      hex[7 - i] = 'A' + digit - 10;
+      buf[7 - i] = 'A' + digit - 10;
     }
   }
-  hex[8] = '\0';
+  buf[8] = '\0';
+  cprintf("%s", buf);
 }
 
 int sys_bufwrite(void) {
@@ -436,18 +437,14 @@ int sys_waitfork(void) {
   return 0;
 }
 
-// added
 int sys_bufread(void) {
   cprintf("clock,pid,pname,event_name,pstate_prev,pstate_next,cpu\n");
-  char hi_hex[8 + 1], lo_hex[8 + 1]; // last character is '\0'
-
   // print event log
   for (int i = 0; i < LOG_SIZE; i++) {
     // clock
-    convert_to_hexa(buf_log[i].clock.hi, hi_hex);
-    cprintf("%s", hi_hex);
-    convert_to_hexa(buf_log[i].clock.lo, lo_hex);
-    cprintf("%s,", lo_hex);
+    print_in_hex(buf_log[i].clock.hi);
+    print_in_hex(buf_log[i].clock.lo);
+    cprintf(",");
 
     // other elements
     cprintf("%d,%s,%d,%d,%d,%d\n", buf_log[i].pid, buf_log[i].name,
@@ -462,23 +459,14 @@ int sys_bufread(void) {
     // pid
     cprintf("%d,", i);
 
-    // fork
-    convert_to_hexa(clock_log[i][0].hi, hi_hex);
-    cprintf("%s", hi_hex);
-    convert_to_hexa(clock_log[i][0].lo, lo_hex);
-    cprintf("%s,", lo_hex);
-
-    // first running
-    convert_to_hexa(clock_log[i][1].hi, hi_hex);
-    cprintf("%s", hi_hex);
-    convert_to_hexa(clock_log[i][1].lo, lo_hex);
-    cprintf("%s,", lo_hex);
-
-    // exit
-    convert_to_hexa(clock_log[i][2].hi, hi_hex);
-    cprintf("%s", hi_hex);
-    convert_to_hexa(clock_log[i][2].lo, lo_hex);
-    cprintf("%s\n", lo_hex);
+    for (int j = 0; j < 3; j++) {
+      print_in_hex(clock_log[i][j].hi);
+      print_in_hex(clock_log[i][j].lo);
+      if (j == 2)
+        cprintf("\n");
+      else
+        cprintf(",");
+    }
   }
 
   cprintf("\n");

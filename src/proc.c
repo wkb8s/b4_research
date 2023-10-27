@@ -11,7 +11,6 @@
 
 int nextpid       = 1;
 int finished_fork = 0;
-struct proc noproc;
 struct schedlog buf_log[LOG_SIZE];
 struct clock clock_log[NPROC][3];
 
@@ -107,7 +106,7 @@ void runqueueinit(void) {
     rq->index_head      = 0;
     rq->index_tail      = 0;
     for (int j = 0; j < RQ_SIZE; j++)
-      rq->content[j] = &noproc;
+      rq->content[j] = NULL;
   }
 
   for (int i = 0; i < NPROC; i++)
@@ -123,15 +122,13 @@ void runqueueinit(void) {
 struct proc *dequeue(struct runqueue *rq) {
   if (!holding(&rq->lock))
     panic("dequeue : no lock");
-  if (rq->size <= 0)
+  if (rq->size-- <= 0)
     panic("dequeue : empty runqueue");
-  if (rq->content[rq->index_head] == &noproc)
+  if (rq->content[rq->index_head] == NULL)
     panic("dequeue : no process");
 
-  rq->size--;
-  struct proc *dequeued            = rq->content[rq->index_head];
-  rq->content[rq->index_head] = &noproc;
-  rq->index_head++;
+  struct proc *dequeued         = rq->content[rq->index_head];
+  rq->content[rq->index_head++] = NULL;
   rq->index_head %= RQ_SIZE;
   return dequeued;
 }
@@ -140,10 +137,11 @@ struct proc *dequeue(struct runqueue *rq) {
 void enqueue(struct runqueue *rq, struct proc *p) {
   if (!holding(&rq->lock))
     panic("enqueue : no lock");
+  if (rq->size++ == RQ_SIZE)
+    panic("enqueue : full runqueue");
   if (rq->content[rq->index_tail] == p)
     panic("enqueue : enqueue same process");
 
-  rq->size++;
   rq->content[rq->index_tail++ % RQ_SIZE] = p;
 }
 
@@ -158,7 +156,7 @@ int mystrcmp(const char *p, const char *q) {
 // added
 void writelog(int pid, char *pname, char event_name, int prev_pstate,
               int next_pstate) {
-  if (!finished_fork || mystrcmp(pname, "bufwrite") || pid == -1)
+  if (!finished_fork || mystrcmp(pname, "bufwrite"))
     /* if (!mystrcmp(pname, "bufwrite") && pid != -1) */
     return;
 
@@ -179,9 +177,7 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
   buf_log[bufsize.value].next_pstate = next_pstate;
   buf_log[bufsize.value].cpu         = mycpuid();
   if (buf_log[bufsize.value].pid != 0) {
-    cprintf("wrote buf[%d]\n", bufsize.value);
-    cprintf("written : %d\n", buf_log[bufsize.value].pid);
-    panic("overwritten!");
+    panic("bufwrite : overwrite");
   }
   buf_log[bufsize.value].pid = pid;
   release(&bufsize.lock);
@@ -268,15 +264,13 @@ void userinit(void) {
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
-
   p->state = RUNNABLE;
+  release(&ptable.lock);
 
   struct runqueue *cur_rq = &runqueue[mycpuid()];
   acquire(&cur_rq->lock);
   enqueue(cur_rq, p); // don't forget to push initproc!
   release(&cur_rq->lock);
-
-  release(&ptable.lock);
 }
 
 // Grow current process's memory by n bytes.
@@ -357,11 +351,9 @@ int fork(void) {
 
   clock_log[np->pid][0] = rdtsc();
 
-  acquire(&ptable.lock);
-
   writelog(np->pid, np->name, FORK, np->state, RUNNABLE);
+  acquire(&ptable.lock);
   np->state = RUNNABLE;
-
   release(&ptable.lock);
 
   return pid;
@@ -460,11 +452,11 @@ int wait(void) {
   }
 }
 
+// must be called with cur_rq->lock
 void work_steal(struct runqueue *cur_rq) {
   struct runqueue *steal_target = NULL;
   int max_rqsize                = 0;
-
-  int stealid = -1;
+  int index_steal               = -1;
 
   // seek stealing target
   for (int i = 0; i < ncpu; i++) {
@@ -473,14 +465,14 @@ void work_steal(struct runqueue *cur_rq) {
       steal_target = rq;
       max_rqsize   = rq->size;
 
-      stealid = i;
+      index_steal = i;
     }
   }
 
   if (steal_target == NULL)
     return;
 
-  if (stealid == 0)
+  if (index_steal == -1)
     return;
 
   if (steal_target == cur_rq)
@@ -489,14 +481,9 @@ void work_steal(struct runqueue *cur_rq) {
   // steal process
   acquire(&steal_target->lock);
   // steal_target may be vanished by execution
-  if (steal_target->size != 0) {
-    struct proc *p_popped = dequeue(steal_target);
+  if (steal_target->size != 0)
+    enqueue(cur_rq, dequeue(steal_target));
 
-    if (p_popped == 0)
-      panic("test");
-
-    enqueue(cur_rq, p_popped);
-  }
   release(&steal_target->lock);
 }
 
@@ -703,7 +690,6 @@ static void wakeup1(void *chan) {
       // added
       writelog(p->pid, p->name, WAKEUP, p->state, RUNNABLE);
 
-      // enqueue
       if (IS_MULTIPLE_RUNQUEUE) {
         struct runqueue *cur_rq = &runqueue[mycpuid()];
         acquire(&cur_rq->lock);
