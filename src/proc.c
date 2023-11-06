@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "flags.h"
 
 #define RQ_SIZE 100
 
@@ -112,7 +113,7 @@ void runqueueinit(void) {
   for (int i = 0; i < NPROC; i++)
     is_first_running.value[i] = 1;
 
-  bufsize.value = 0;
+  bufsize.value = -1;
 
   for (int i = 0; i < LOG_SIZE; i++)
     buf_log[i].pid = 0;
@@ -156,8 +157,10 @@ int mystrcmp(const char *p, const char *q) {
 // added
 void writelog(int pid, char *pname, char event_name, int prev_pstate,
               int next_pstate) {
-  if (!finished_fork || mystrcmp(pname, "bufwrite"))
-    /* if (!mystrcmp(pname, "bufwrite") && pid != -1) */
+  if (IS_CALCULATION && mystrcmp(pname, "bufwrite"))
+    return;
+
+  if (IS_YIELD_REPEAT && (!finished_fork || mystrcmp(pname, "bufwrite")))
     return;
 
   acquire(&bufsize.lock);
@@ -528,7 +531,7 @@ void scheduler(void) {
       release(&is_first_running.lock);
 
       acquire(&ptable.lock); // must place before writelog()
-      writelog(p->pid, p->name, TICK, p->state, RUNNING);
+      /* writelog(p->pid, p->name, TICK, p->state, RUNNING); */
       p->state = RUNNING;
       swtch(&(c->scheduler), p->context);
       release(&ptable.lock);
@@ -555,7 +558,7 @@ void scheduler(void) {
         }
         release(&is_first_running.lock);
 
-        writelog(p->pid, p->name, TICK, p->state, RUNNING);
+        /* writelog(p->pid, p->name, TICK, p->state, RUNNING); */
         p->state = RUNNING;
         swtch(&(c->scheduler), p->context);
         // resume from here (even when initproc is generated)
@@ -597,12 +600,12 @@ void yield(void) {
   struct proc *curproc = myproc();
 
   writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE);
+  struct runqueue *cur_rq = &runqueue[mycpuid()];
 
   acquire(&ptable.lock); // DOC: yieldlock
 
   // enqueue
   if (IS_MULTIPLE_RUNQUEUE) {
-    struct runqueue *cur_rq = &runqueue[mycpuid()];
     acquire(&cur_rq->lock);
     enqueue(cur_rq, curproc);
     release(&cur_rq->lock);
@@ -611,6 +614,7 @@ void yield(void) {
   curproc->state = RUNNABLE;
 
   sched();
+  writelog(myproc()->pid, myproc()->name, TICK, RUNNABLE, RUNNING);
   release(&ptable.lock);
 }
 
@@ -668,6 +672,7 @@ void sleep(void *chan, struct spinlock *lk) {
   p->state = SLEEPING;
 
   sched();
+  p = myproc();
 
   // Tidy up.
   p->chan = 0;
@@ -677,6 +682,7 @@ void sleep(void *chan, struct spinlock *lk) {
     release(&ptable.lock);
     acquire(lk);
   }
+  writelog(p->pid, p->name, TICK, RUNNABLE, RUNNING);
 }
 
 // PAGEBREAK!

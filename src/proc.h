@@ -1,7 +1,3 @@
-// you can enable only one of them
-#define IS_MULTIPLE_RUNQUEUE 1
-#define IS_ROUNDROBIN 0
-
 // Per-CPU state
 struct cpu {
   uchar apicid;              // Local APIC ID

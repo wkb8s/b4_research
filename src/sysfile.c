@@ -15,6 +15,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "fcntl.h"
+#include "flags.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -468,6 +469,20 @@ int sys_bufread(void) {
         cprintf(",");
     }
   }
+  cprintf("\n");
+
+  // environment
+  cprintf("NPROC,%d\n", NPROC);
+  if (IS_ROUNDROBIN)
+    cprintf("policy,default\n");
+  if (IS_MULTIPLE_RUNQUEUE)
+    cprintf("policy,multiple\n");
+
+  // workload
+  if (IS_YIELD_REPEAT)
+    cprintf("workload,%s\n", "yieldrepeat");
+  if (IS_CALCULATION)
+    cprintf("workload,%s\n", "calculation");
 
   cprintf("\n");
   return 0;

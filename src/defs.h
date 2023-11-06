@@ -122,6 +122,7 @@ int wait(void);
 void wakeup(void*);
 void yield(void);
 void runqueueinit(void);
+void writelog(int pid, char* pname, char event_name, int prev_pstate, int next_pstate);
 
 // swtch.S
 void swtch(struct context**, struct context*);

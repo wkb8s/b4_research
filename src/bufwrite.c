@@ -4,11 +4,12 @@
 #include "user.h"
 #include "fs.h"
 #include "fcntl.h"
+#include "flags.h"
 
 // also need to modify sys_bufwrite() in sysfile.c
 #define FORK_NUM 32
 #define CALC_NUM 32
-#define CALC_LOOP 100
+#define CALC_LOOP 100000000
 
 char buf[8192];
 int stdout = 1;
@@ -218,7 +219,6 @@ void yieldrepeat(void) {
 
       /* calculation(); */
       for (int j = 0; j < 500; j++) {
-        calculation();
         bufwrite(); // need include yield() in sys_bufwrite()
       }
       exit(); // don't forget
@@ -231,8 +231,11 @@ void yieldrepeat(void) {
 }
 
 int main(int argc, char *argv[]) {
-  yieldrepeat();
-  /* calculation(); */
+  if (IS_YIELD_REPEAT)
+    yieldrepeat();
+
+  if (IS_CALCULATION)
+    calculation();
   /* calc_write_mix(); */
   /* fork(); */
   /* fork(); */
