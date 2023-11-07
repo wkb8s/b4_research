@@ -171,7 +171,6 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
 
   bufsize.value++;
   buf_log[bufsize.value].clock = rdtsc();
-
   for (int i = 0; i < 16; i++) {
     buf_log[bufsize.value].name[i] = pname[i];
   }
@@ -179,10 +178,7 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
   buf_log[bufsize.value].prev_pstate = prev_pstate;
   buf_log[bufsize.value].next_pstate = next_pstate;
   buf_log[bufsize.value].cpu         = mycpuid();
-  if (buf_log[bufsize.value].pid != 0) {
-    panic("bufwrite : overwrite");
-  }
-  buf_log[bufsize.value].pid = pid;
+  buf_log[bufsize.value].pid         = pid;
   release(&bufsize.lock);
 }
 
@@ -308,6 +304,8 @@ int fork(void) {
     return -1;
   }
 
+  clock_log[np->pid][0] = rdtsc();
+
   // Copy process state from proc.
   if ((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0) {
     kfree(np->kstack);
@@ -351,8 +349,6 @@ int fork(void) {
     enqueue(target, np);
     release(&target->lock);
   }
-
-  clock_log[np->pid][0] = rdtsc();
 
   writelog(np->pid, np->name, FORK, np->state, RUNNABLE);
   acquire(&ptable.lock);
@@ -530,7 +526,7 @@ void scheduler(void) {
       }
       release(&is_first_running.lock);
 
-      acquire(&ptable.lock); // must place before writelog()
+      acquire(&ptable.lock);
       /* writelog(p->pid, p->name, TICK, p->state, RUNNING); */
       p->state = RUNNING;
       swtch(&(c->scheduler), p->context);
@@ -614,8 +610,10 @@ void yield(void) {
   curproc->state = RUNNABLE;
 
   sched();
+  /* curproc = myproc(); */
   writelog(myproc()->pid, myproc()->name, TICK, RUNNABLE, RUNNING);
   release(&ptable.lock);
+  /* writelog(curproc->pid, curproc->name, TICK, RUNNABLE, RUNNING); */
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -672,7 +670,7 @@ void sleep(void *chan, struct spinlock *lk) {
   p->state = SLEEPING;
 
   sched();
-  p = myproc();
+  writelog(myproc()->pid, myproc()->name, TICK, RUNNABLE, RUNNING);
 
   // Tidy up.
   p->chan = 0;
@@ -682,7 +680,7 @@ void sleep(void *chan, struct spinlock *lk) {
     release(&ptable.lock);
     acquire(lk);
   }
-  writelog(p->pid, p->name, TICK, RUNNABLE, RUNNING);
+  /* writelog(p->pid, p->name, TICK, RUNNABLE, RUNNING); */
 }
 
 // PAGEBREAK!

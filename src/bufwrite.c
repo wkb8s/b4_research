@@ -6,11 +6,6 @@
 #include "fcntl.h"
 #include "flags.h"
 
-// also need to modify sys_bufwrite() in sysfile.c
-#define FORK_NUM 32
-#define CALC_NUM 32
-#define CALC_LOOP 100000000
-
 char buf[8192];
 int stdout = 1;
 

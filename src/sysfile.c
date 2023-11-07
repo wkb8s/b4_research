@@ -479,8 +479,11 @@ int sys_bufread(void) {
     cprintf("policy,multiple\n");
 
   // workload
-  if (IS_YIELD_REPEAT)
+  if (IS_YIELD_REPEAT) {
+
     cprintf("workload,%s\n", "yieldrepeat");
+  cprintf("forknum,%d\n", FORK_NUM);
+  }
   if (IS_CALCULATION)
     cprintf("workload,%s\n", "calculation");
 
