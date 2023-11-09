@@ -1,4 +1,7 @@
-#define NPROC 100
+#!/bin/bash
+
+cat << EOF
+#define NPROC $1
 #define KSTACKSIZE 4096
 #define NCPU 8
 #define NOFILE 16
@@ -11,4 +14,5 @@
 #define LOGSIZE (MAXOPBLOCKS * 3)
 #define NBUF (MAXOPBLOCKS * 3)
 #define FSSIZE 1000
-#define LOG_SIZE 500
+#define LOG_SIZE $2
+EOF

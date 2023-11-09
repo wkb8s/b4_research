@@ -439,6 +439,7 @@ int sys_waitfork(void) {
 }
 
 int sys_bufread(void) {
+  cprintf("\nstart printing\n");
   cprintf("clock,pid,pname,event_name,pstate_prev,pstate_next,cpu\n");
   // print event log
   for (int i = 0; i < LOG_SIZE; i++) {
@@ -480,12 +481,13 @@ int sys_bufread(void) {
 
   // workload
   if (IS_YIELD_REPEAT) {
-
     cprintf("workload,%s\n", "yieldrepeat");
-  cprintf("forknum,%d\n", FORK_NUM);
+    cprintf("forknum,%d\n", FORK_NUM);
   }
   if (IS_CALCULATION)
     cprintf("workload,%s\n", "calculation");
+  if (IS_LARGEWRITE)
+    cprintf("workload,%s\n", "largewrite");
 
   cprintf("\n");
   return 0;

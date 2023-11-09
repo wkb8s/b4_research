@@ -1,6 +1,6 @@
 *.img
-*.csv
 kernel
+
 tmp.log
+log.csv
 clock.csv
-summary.md

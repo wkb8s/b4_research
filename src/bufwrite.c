@@ -183,7 +183,29 @@ void calc_write_mix() {
   }
 }
 
-void runqueuetest() {
+void fork_write() {
+  int pid, pi;
+
+  for (pi = 0; pi < FORK_NUM; pi++) {
+    pid = fork();
+    if (pid < 0) {
+      printf(1, "fork failed\n");
+      exit();
+    }
+
+    // child
+    if (pid == 0) {
+      largewrite();
+      exit();
+    }
+  }
+
+  // parent wait child
+  for (pi = 0; pi < FORK_NUM; pi++)
+    wait();
+}
+
+void fork_calc() {
   int pid, pi;
 
   for (pi = 0; pi < FORK_NUM; pi++) {
@@ -230,13 +252,10 @@ int main(int argc, char *argv[]) {
     yieldrepeat();
 
   if (IS_CALCULATION)
-    calculation();
-  /* calc_write_mix(); */
-  /* fork(); */
-  /* fork(); */
-  /* fork(); */
-  /* bufwrite(); */
-  /* runqueuetest(); */
+    fork_calc();
+
+  if (IS_LARGEWRITE)
+    largewrite();
 
   exit();
 }

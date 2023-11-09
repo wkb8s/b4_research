@@ -157,7 +157,7 @@ int mystrcmp(const char *p, const char *q) {
 // added
 void writelog(int pid, char *pname, char event_name, int prev_pstate,
               int next_pstate) {
-  if (IS_CALCULATION && mystrcmp(pname, "bufwrite"))
+  if (!IS_YIELD_REPEAT && mystrcmp(pname, "bufwrite"))
     return;
 
   if (IS_YIELD_REPEAT && (!finished_fork || mystrcmp(pname, "bufwrite")))
@@ -527,7 +527,6 @@ void scheduler(void) {
       release(&is_first_running.lock);
 
       acquire(&ptable.lock);
-      /* writelog(p->pid, p->name, TICK, p->state, RUNNING); */
       p->state = RUNNING;
       swtch(&(c->scheduler), p->context);
       release(&ptable.lock);
@@ -554,10 +553,8 @@ void scheduler(void) {
         }
         release(&is_first_running.lock);
 
-        /* writelog(p->pid, p->name, TICK, p->state, RUNNING); */
         p->state = RUNNING;
         swtch(&(c->scheduler), p->context);
-        // resume from here (even when initproc is generated)
         switchkvm();
         c->proc = 0; // no process is executed in current CPU
       }
