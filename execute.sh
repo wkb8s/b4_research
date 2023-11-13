@@ -1,19 +1,25 @@
 #!/bin/bash
 
 WORKLOAD=$1
+NCPU=8
+FORK_NUM=32
+CALC_NUM=32
+LOGSIZE=500
 
-./scripts/logging.sh 15000 500 IS_ROUNDROBIN $WORKLOAD 32 32
-./scripts/logging.sh 5000 500 IS_ROUNDROBIN $WORKLOAD 32 32
-./scripts/logging.sh 100 500 IS_ROUNDROBIN $WORKLOAD 32 32
+POLICIES=(
+	"IS_ROUNDROBIN"
+	"IS_MULTIPLE_RUNQUEUE"
+)
+NPROCS=(
+	"15000"
+	"5000"
+	"100"
+)
 
-./scripts/logging.sh 15000 500 IS_MULTIPLE_RUNQUEUE $WORKLOAD 32 32
-./scripts/logging.sh 5000 500 IS_MULTIPLE_RUNQUEUE $WORKLOAD 32 32
-./scripts/logging.sh 100 500 IS_MULTIPLE_RUNQUEUE $WORKLOAD 32 32
+for POLICY in "${POLICIES[@]}" ; do
+	for NPROC in "${NPROCS[@]}" ; do
+		./scripts/logging.sh $NPROC $NCPU $LOGSIZE $POLICY $WORKLOAD $FORK_NUM $CALC_NUM
+	done
+done
 
-if [ $WORKLOAD = "IS_CALCULATION" ]; then
-	python3 scripts/plot_calculation.py
-elif [ $WORKLOAD = "IS_YIELD_REPEAT" ]; then
-	python3 scripts/plot_yieldrepeat.py
-elif [ $WORKLOAD = "IS_LARGEWRITE" ]; then
-	python3 scripts/plot_largewrite.py
-fi
+python3 scripts/plot.py $WORKLOAD $NCPU $LOGSIZE $FORK_NUM

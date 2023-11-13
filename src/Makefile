@@ -236,8 +236,10 @@ qemu: fs.img xv6.img
 qemu-memfs: xv6memfs.img
 	$(QEMU) -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 256
 
-qemu-nox: fs.img xv6.img
-	# $(QEMU) -enable-kvm -nographic $(QEMUOPTS)
+# use below
+# $(QEMU) -enable-kvm -nographic $(QEMUOPTS)
+# must include taskset
+qemu-nox: xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl

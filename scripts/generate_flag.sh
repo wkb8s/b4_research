@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# enable only one of options
 cat << EOF | sed -E "s/($1) 0/\1 1/g; s/($2) 0/\1 1/g"
 #define IS_MULTIPLE_RUNQUEUE 0
 #define IS_ROUNDROBIN 0

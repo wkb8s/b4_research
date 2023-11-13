@@ -1,9 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import yaml
+import sys
 
+args = sys.argv
 nprocs = ['100', '5000', '15000']
 policies = ['default', 'multiple']
+workload = args[1]
+ncpu = args[2]
+logsize = args[3]
+forknum = args[4]
+
+if (workload == "IS_YIELD_REPEAT"):
+    workload = "yieldrepeat"
+elif (workload == "IS_CALCULATION"):
+    workload = "calculation"
+    forknum = ''
+elif (workload == "IS_LARGEWRITE"):
+    workload = "largewrite"
+    forknum = ''
 
 x1 = [1, 2, 3]
 x2 = [1.3, 2.3, 3.3]
@@ -17,7 +32,7 @@ for i in range(len(category)):
     for policy in policies:
         values = []
         for nproc in nprocs:
-            with open('log/yieldrepeat/' + policy + '_cpu8_nproc' + nproc + '_fork32_logsize500.yaml') as file:
+            with open('log/' + workload + '/' + policy + '_cpu' + ncpu + '_nproc' + nproc + '_fork' + forknum + '_logsize' + logsize + '.yaml') as file:
                 obj = yaml.safe_load(file)
                 values.append(obj[category[i]][index[i]])
         y[policy] = values
@@ -31,4 +46,4 @@ for i in range(len(category)):
     plt.legend(loc=2)
 
     plt.xticks([1.15, 2.15, 3.15], nprocs)
-    plt.savefig("fig/yieldrepeat/" + category[i] + ".png")
+    plt.savefig("fig/" + workload + "/" + category[i] + ".png")

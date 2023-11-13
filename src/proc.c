@@ -116,7 +116,7 @@ void runqueueinit(void) {
   bufsize.value = -1;
 
   for (int i = 0; i < LOG_SIZE; i++)
-    buf_log[i].pid = 0;
+    buf_log[i].pid = -1;
 }
 
 // Must be called with rq->lock
@@ -125,13 +125,8 @@ struct proc *dequeue(struct runqueue *rq) {
     panic("dequeue : no lock");
   if (rq->size-- <= 0)
     panic("dequeue : empty runqueue");
-  if (rq->content[rq->index_head] == NULL)
-    panic("dequeue : no process");
 
-  struct proc *dequeued         = rq->content[rq->index_head];
-  rq->content[rq->index_head++] = NULL;
-  rq->index_head %= RQ_SIZE;
-  return dequeued;
+  return rq->content[rq->index_head++ % RQ_SIZE];
 }
 
 // Must be called with rq->lock
@@ -140,8 +135,6 @@ void enqueue(struct runqueue *rq, struct proc *p) {
     panic("enqueue : no lock");
   if (rq->size++ == RQ_SIZE)
     panic("enqueue : full runqueue");
-  if (rq->content[rq->index_tail] == p)
-    panic("enqueue : enqueue same process");
 
   rq->content[rq->index_tail++ % RQ_SIZE] = p;
 }

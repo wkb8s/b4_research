@@ -1,9 +1,9 @@
 #define IS_MULTIPLE_RUNQUEUE 1
 #define IS_ROUNDROBIN 0
 
-#define IS_YIELD_REPEAT 1
+#define IS_YIELD_REPEAT 0
 #define IS_CALCULATION 0
-#define IS_LARGEWRITE 0
+#define IS_LARGEWRITE 1
 
 #define FORK_NUM 32
 #define CALC_NUM 32
