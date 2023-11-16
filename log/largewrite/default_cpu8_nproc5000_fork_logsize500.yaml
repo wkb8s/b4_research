@@ -2,50 +2,40 @@ _environment:
   LOGSIZE: 500
   NCPU: 8
   NPROC: 5000
-  date: 2023/11/13 03:06
+  date: 2023/11/14 07:23
   forknum: ''
   policy: default
   workload: largewrite
 balancing:
-  _data_pid03: 76.6450402890809
-  _data_pid04: 5.292953371792737
-  _data_pid05: 4.359215016378623
-  _data_pid06: 3.6394081015675708
-  _data_pid07: 2.752396876600967
-  _data_pid08: 3.5021220229550045
-  _data_pid09: 1.609150475032351
-  _data_pid10: 1.4034224204975272
-  _data_pid11: 0.6279611609882346
-  _data_pid12: 0.1683302651060931
-  average: 10.0
-  size: 10
-  standard: 22.27004216535991
-  std/ave: 222.70042165359908
+  _data_pid03: 100.0
+  average: 100.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0
   total(for debug): 100.0
 clock:
-  idle_average: 1655397.4468085107
-  idle_size: 235
-  running_average: 222583.09677419355
-  running_size: 248
+  idle_average: 26033817.793939393
+  idle_size: 165
+  running_average: 4857869.47368421
+  running_size: 19
 cpu_usage:
-  _data_pid00: 3.6120584684964867
-  _data_pid01: 2.5533475010024547
-  _data_pid02: 3.7347345697225003
-  _data_pid03: 2.3816329174619244
-  _data_pid04: 9.120560865882403
-  _data_pid05: 4.149508650733083
-  _data_pid06: 7.493889791216895
-  _data_pid07: 66.9374498376051
-  average: 12.426439887957248
-  standard: 20.696714245576562
-  std/ave: 166.55385156318368
+  _data_pid00: 1.2722240656365693
+  _data_pid02: 0.015265906864056397
+  _data_pid03: 5.393423201988369
+  _data_pid04: 0.819218770116469
+  _data_pid05: 7.630771518447764
+  _data_pid06: 1.6975512672590591
+  _data_pid07: 0.15472300101364683
+  average: 2.1035108399295095
+  standard: 2.5504392243357685
+  std/ave: 121.24678304111978
 time_response:
-  average: 8399628.606060605
-  size: 33
-  standard: 3659375.672717046
-  std/ave: 43.565922308477866
+  average: 6586272.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0
 time_turnaround:
-  average: 1939670159.5151515
-  size: 33
-  standard: 99256450.53673989
-  std/ave: 5.117181911049787
+  average: 6809464128.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0

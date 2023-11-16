@@ -239,7 +239,7 @@ qemu-memfs: xv6memfs.img
 # use below
 # $(QEMU) -enable-kvm -nographic $(QEMUOPTS)
 # must include taskset
-qemu-nox: xv6.img
+qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl

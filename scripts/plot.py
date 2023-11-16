@@ -15,7 +15,6 @@ if (workload == "IS_YIELD_REPEAT"):
     workload = "yieldrepeat"
 elif (workload == "IS_CALCULATION"):
     workload = "calculation"
-    forknum = ''
 elif (workload == "IS_LARGEWRITE"):
     workload = "largewrite"
     forknum = ''
@@ -24,6 +23,7 @@ x1 = [1, 2, 3]
 x2 = [1.3, 2.3, 3.3]
 
 category = ["time_turnaround", "cpu_usage", "balancing"]
+ytitle = ["turnaround time [clock]", "cpu usage [%]", "std of load balancing"]
 index = ["average", "average", "standard"]
 
 for i in range(len(category)):
@@ -39,7 +39,7 @@ for i in range(len(category)):
 
     fig, ax = plt.subplots()
     ax.set_xlabel('size of ptable')
-    ax.set_ylabel(category[i])
+    ax.set_ylabel(ytitle[i])
 
     plt.bar(x1, y["default"], color='b', width=0.25, label='round robin', align="center")
     plt.bar(x2, y["multiple"], color='g', width=0.25, label='multiple runqueue', align="center")

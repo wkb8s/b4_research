@@ -424,6 +424,7 @@ void print_in_hex(unsigned int n) {
 }
 
 int sys_bufwrite(void) {
+  writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE);
   yield();
   return 0;
 }
@@ -433,6 +434,7 @@ int sys_waitfork(void) {
     finished_fork = 1;
   }
   while (finished_fork == 0) {
+    writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE);
     yield();
   }
   return 0;
@@ -484,8 +486,10 @@ int sys_bufread(void) {
     cprintf("workload,%s\n", "yieldrepeat");
     cprintf("forknum,%d\n", FORK_NUM);
   }
-  if (IS_CALCULATION)
+  if (IS_CALCULATION) {
     cprintf("workload,%s\n", "calculation");
+    cprintf("forknum,%d\n", FORK_NUM);
+  }
   if (IS_LARGEWRITE)
     cprintf("workload,%s\n", "largewrite");
 

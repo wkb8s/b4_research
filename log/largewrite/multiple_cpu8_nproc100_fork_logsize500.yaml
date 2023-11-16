@@ -2,48 +2,34 @@ _environment:
   LOGSIZE: 500
   NCPU: 8
   NPROC: 100
-  date: 2023/11/13 03:07
+  date: 2023/11/14 06:53
   forknum: ''
   policy: multiple
   workload: largewrite
 balancing:
-  _data_pid03: 60.44006896648947
-  _data_pid04: 11.949553697571034
-  _data_pid05: 9.546575365135638
-  _data_pid06: 6.979639194688134
-  _data_pid07: 4.760967859973264
-  _data_pid08: 3.9211972661026517
-  _data_pid09: 1.610403078852381
-  _data_pid10: 0.7915945711874286
-  average: 12.5
-  size: 8
-  standard: 18.46249190162408
-  std/ave: 147.69993521299264
-  total(for debug): 100.00000000000001
+  _data_pid03: 100.0
+  average: 100.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0
+  total(for debug): 100.0
 clock:
-  idle_average: 1269059.6610169492
-  idle_size: 236
-  running_average: 284980.4696356275
-  running_size: 247
+  idle_average: 1124695.9520958085
+  idle_size: 167
+  running_average: 8539867.42857143
+  running_size: 7
 cpu_usage:
-  _data_pid00: 29.798518229332853
-  _data_pid01: 3.640870431384568
-  _data_pid02: 6.126888804150722
-  _data_pid03: 6.794485524091004
-  _data_pid04: 7.576658083241217
-  _data_pid05: 10.028267559766338
-  _data_pid06: 97.87008088928589
-  _data_pid07: 15.126914818981485
-  average: 19.030119193619385
-  standard: 29.81648275251062
-  std/ave: 156.68048344388615
+  _data_pid07: 24.143084104987036
+  average: 24.143084104987036
+  standard: 0.0
+  std/ave: 0.0
 time_response:
-  average: 8702432.969696969
-  size: 33
-  standard: 6128684.580483841
-  std/ave: 70.42495589250429
+  average: 9853088.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0
 time_turnaround:
-  average: 1670288206.5454545
-  size: 33
-  standard: 175329457.4001345
-  std/ave: 10.496958352041334
+  average: 5625384736.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0

@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
     yieldrepeat();
 
   if (IS_CALCULATION)
-    fork_calc();
+  fork_calc();
 
   if (IS_LARGEWRITE)
     largewrite();

@@ -21,7 +21,7 @@ sed -i "s/CPUS\ :=\ [0-9]*/CPUS\ :=\ $NCPU/" $MAKEFILE_PATH
 if [ $3 == "IS_ROUNDROBIN" ]; then
   (cd src && timeout 5s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
 else
-  (cd src && timeout 10s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
+  (cd src && timeout 7s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
 fi
 
 # delete unnecessary information

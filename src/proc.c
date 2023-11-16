@@ -101,6 +101,7 @@ int mycpuid(void) {
 }
 
 void runqueueinit(void) {
+  // init runqueue
   for (int i = 0; i < ncpu; i++) {
     struct runqueue *rq = &runqueue[i];
     rq->size            = 0;
@@ -113,47 +114,42 @@ void runqueueinit(void) {
   for (int i = 0; i < NPROC; i++)
     is_first_running.value[i] = 1;
 
-  bufsize.value = -1;
-
-  for (int i = 0; i < LOG_SIZE; i++)
-    buf_log[i].pid = -1;
+  bufsize.value = 0;
 }
 
 // Must be called with rq->lock
 struct proc *dequeue(struct runqueue *rq) {
+  struct proc *head = rq->content[rq->index_head];
+
   if (!holding(&rq->lock))
     panic("dequeue : no lock");
   if (rq->size-- <= 0)
     panic("dequeue : empty runqueue");
+  if (head == NULL)
+    panic("dequeue : no proc");
 
-  return rq->content[rq->index_head++ % RQ_SIZE];
+  rq->content[rq->index_head] = NULL;
+  rq->index_head              = (rq->index_head + 1) % RQ_SIZE;
+  return head;
 }
 
-// Must be called with rq->lock
 void enqueue(struct runqueue *rq, struct proc *p) {
-  if (!holding(&rq->lock))
-    panic("enqueue : no lock");
-  if (rq->size++ == RQ_SIZE)
+  if (rq->size >= RQ_SIZE)
     panic("enqueue : full runqueue");
+  if (rq->content[rq->index_tail] != NULL)
+    panic("enqueue : already exist");
 
-  rq->content[rq->index_tail++ % RQ_SIZE] = p;
+  rq->content[rq->index_tail] = p;
+  rq->index_tail              = (rq->index_tail + 1) % RQ_SIZE;
+  rq->size++; // must be placed in end
 }
 
-// added
-// from ulib.c
-int mystrcmp(const char *p, const char *q) {
-  while (*p && *p == *q)
-    p++, q++;
-  return (uchar)*p - (uchar)*q;
-}
-
-// added
-void writelog(int pid, char *pname, char event_name, int prev_pstate,
-              int next_pstate) {
-  if (!IS_YIELD_REPEAT && mystrcmp(pname, "bufwrite"))
+void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
+  if (IS_CALCULATION && (!finished_fork || pid < 3 || pid > 3 + FORK_NUM))
     return;
-
-  if (IS_YIELD_REPEAT && (!finished_fork || mystrcmp(pname, "bufwrite")))
+  if (IS_LARGEWRITE && (pid != 3))
+    return;
+  if (IS_YIELD_REPEAT && (!finished_fork || pid < 3 || pid > 3 + FORK_NUM))
     return;
 
   acquire(&bufsize.lock);
@@ -161,18 +157,15 @@ void writelog(int pid, char *pname, char event_name, int prev_pstate,
     release(&bufsize.lock);
     return;
   }
-
-  bufsize.value++;
-  buf_log[bufsize.value].clock = rdtsc();
-  for (int i = 0; i < 16; i++) {
-    buf_log[bufsize.value].name[i] = pname[i];
-  }
-  buf_log[bufsize.value].event_name  = event_name;
-  buf_log[bufsize.value].prev_pstate = prev_pstate;
-  buf_log[bufsize.value].next_pstate = next_pstate;
-  buf_log[bufsize.value].cpu         = mycpuid();
-  buf_log[bufsize.value].pid         = pid;
+  int index = bufsize.value++;
   release(&bufsize.lock);
+
+  buf_log[index].clock       = rdtsc();
+  buf_log[index].event_name  = event_name;
+  buf_log[index].prev_pstate = prev_pstate;
+  buf_log[index].next_pstate = next_pstate;
+  buf_log[index].cpu         = mycpuid();
+  buf_log[index].pid         = pid;
 }
 
 // PAGEBREAK: 32
@@ -185,7 +178,6 @@ static struct proc *allocproc(void) {
   char *sp;
 
   acquire(&ptable.lock);
-  /* writelog(-1, "test", PTABLE_LOCK, RELEASED, ACQUIRED); */
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == UNUSED)
@@ -197,7 +189,7 @@ static struct proc *allocproc(void) {
 found:
   p->pid = nextpid++;
 
-  writelog(p->pid, p->name, ALLOCPROC, p->state, EMBRYO);
+  writelog(p->pid, ALLOCPROC, p->state, EMBRYO);
   p->state = EMBRYO;
 
   release(&ptable.lock);
@@ -343,7 +335,7 @@ int fork(void) {
     release(&target->lock);
   }
 
-  writelog(np->pid, np->name, FORK, np->state, RUNNABLE);
+  writelog(np->pid, FORK, np->state, RUNNABLE);
   acquire(&ptable.lock);
   np->state = RUNNABLE;
   release(&ptable.lock);
@@ -391,7 +383,7 @@ void exit(void) {
 
   clock_log[curproc->pid][2] = rdtsc();
 
-  writelog(curproc->pid, curproc->name, EXIT, curproc->state, ZOMBIE);
+  writelog(curproc->pid, EXIT, curproc->state, ZOMBIE);
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
@@ -417,7 +409,7 @@ int wait(void) {
 
       // Found one.
       if (p->state == ZOMBIE) {
-        writelog(p->pid, p->name, WAIT, p->state, UNUSED);
+        writelog(p->pid, WAIT, p->state, UNUSED);
 
         pid = p->pid;
         kfree(p->kstack);
@@ -444,39 +436,32 @@ int wait(void) {
   }
 }
 
-// must be called with cur_rq->lock
-void work_steal(struct runqueue *cur_rq) {
-  struct runqueue *steal_target = NULL;
-  int max_rqsize                = 0;
-  int index_steal               = -1;
+void worksteal(struct runqueue *cur_rq) {
+  struct runqueue *target = NULL;
+  int maxsize             = 0;
 
   // seek stealing target
-  for (int i = 0; i < ncpu; i++) {
+  for (int i = 0; i < NCPU; i++) {
     struct runqueue *rq = &runqueue[i];
-    if (rq->size > max_rqsize && rq != cur_rq) {
-      steal_target = rq;
-      max_rqsize   = rq->size;
-
-      index_steal = i;
+    int size            = rq->size;
+    if (size > maxsize && rq != cur_rq) {
+      target  = rq;
+      maxsize = size;
     }
   }
 
-  if (steal_target == NULL)
+  if (target == NULL || maxsize == 0)
     return;
-
-  if (index_steal == -1)
-    return;
-
-  if (steal_target == cur_rq)
-    panic("steal itself");
+  if (target == cur_rq)
+    panic("work_steal: steal myself");
 
   // steal process
-  acquire(&steal_target->lock);
-  // steal_target may be vanished by execution
-  if (steal_target->size != 0)
-    enqueue(cur_rq, dequeue(steal_target));
-
-  release(&steal_target->lock);
+  // target may be vanished by execution or stealing
+  // no cur_rq->lock needed : cur_rq is empty
+  acquire(&target->lock);
+  if (target->size > 0)
+    enqueue(cur_rq, dequeue(target));
+  release(&target->lock);
 }
 
 // PAGEBREAK: 42
@@ -499,10 +484,12 @@ void scheduler(void) {
     sti();
 
     // current runqueue is empty
+    // no need cur_rq->lock
+    // because empty rq is not edited by others
     acquire(&cur_rq->lock);
     if (cur_rq->size == 0) {
-      work_steal(cur_rq);
       release(&cur_rq->lock);
+      worksteal(cur_rq);
     }
 
     // current runqueue is not empty
@@ -585,7 +572,7 @@ void sched(void) {
 void yield(void) {
   struct proc *curproc = myproc();
 
-  writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE);
+  /* writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE); */
   struct runqueue *cur_rq = &runqueue[mycpuid()];
 
   acquire(&ptable.lock); // DOC: yieldlock
@@ -601,7 +588,7 @@ void yield(void) {
 
   sched();
   /* curproc = myproc(); */
-  writelog(myproc()->pid, myproc()->name, TICK, RUNNABLE, RUNNING);
+  writelog(myproc()->pid, TICK, RUNNABLE, RUNNING);
   release(&ptable.lock);
   /* writelog(curproc->pid, curproc->name, TICK, RUNNABLE, RUNNING); */
 }
@@ -655,12 +642,12 @@ void sleep(void *chan, struct spinlock *lk) {
   // Go to sleep.
   p->chan = chan;
 
-  writelog(p->pid, p->name, SLEEP, p->state, SLEEPING);
+  writelog(p->pid, SLEEP, p->state, SLEEPING);
 
   p->state = SLEEPING;
 
   sched();
-  writelog(myproc()->pid, myproc()->name, TICK, RUNNABLE, RUNNING);
+  writelog(myproc()->pid, TICK, RUNNABLE, RUNNING);
 
   // Tidy up.
   p->chan = 0;
@@ -682,7 +669,7 @@ static void wakeup1(void *chan) {
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == SLEEPING && p->chan == chan) {
       // added
-      writelog(p->pid, p->name, WAKEUP, p->state, RUNNABLE);
+      writelog(p->pid, WAKEUP, p->state, RUNNABLE);
 
       if (IS_MULTIPLE_RUNQUEUE) {
         struct runqueue *cur_rq = &runqueue[mycpuid()];
