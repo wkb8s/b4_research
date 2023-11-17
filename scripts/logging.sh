@@ -19,9 +19,9 @@ sed -i "s/CPUS\ :=\ [0-9]*/CPUS\ :=\ $NCPU/" $MAKEFILE_PATH
 ./scripts/generate_flag.sh $POLICY $WORKLOAD $FORK_NUM $CALC_NUM > src/flags.h
 
 if [ $3 == "IS_ROUNDROBIN" ]; then
-  (cd src && timeout 5s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
-else
   (cd src && timeout 7s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
+else
+  (cd src && timeout 10s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
 fi
 
 # delete unnecessary information

@@ -75,15 +75,20 @@ void trap(struct trapframe *tf) {
     // PAGEBREAK: 13
     default:
       if (myproc() == 0) {
-        panic("trap : no proc");
-      }
-
-      if (myproc() == 0 || (tf->cs & 3) == 0) {
         // In kernel, it must be our mistake.
-        cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
+        cprintf("unexpected trap1 %d from cpu %d eip %x (cr2=0x%x)\n",
                 tf->trapno, cpuid(), tf->eip, rcr2());
         panic("trap");
       }
+
+      if ((tf->cs & 3) == 0) {
+
+        // In kernel, it must be our mistake.
+        cprintf("unexpected trap2 %d from cpu %d eip %x (cr2=0x%x)\n",
+                tf->trapno, cpuid(), tf->eip, rcr2());
+        panic("trap");
+      }
+
       // In user space, assume process misbehaved.
       cprintf(
           "pid %d %s: trap %d err %d on cpu %d "

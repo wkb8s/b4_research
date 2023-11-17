@@ -123,7 +123,7 @@ struct proc *dequeue(struct runqueue *rq) {
 
   if (!holding(&rq->lock))
     panic("dequeue : no lock");
-  if (rq->size-- <= 0)
+  if (rq->size-- < 1)
     panic("dequeue : empty runqueue");
   if (head == NULL)
     panic("dequeue : no proc");
@@ -133,23 +133,25 @@ struct proc *dequeue(struct runqueue *rq) {
   return head;
 }
 
+// Must be called with rq->lock
 void enqueue(struct runqueue *rq, struct proc *p) {
-  if (rq->size >= RQ_SIZE)
+  if (!holding(&rq->lock))
+    panic("enqueue : no lock");
+  if (rq->size++ > RQ_SIZE)
     panic("enqueue : full runqueue");
   if (rq->content[rq->index_tail] != NULL)
     panic("enqueue : already exist");
 
   rq->content[rq->index_tail] = p;
   rq->index_tail              = (rq->index_tail + 1) % RQ_SIZE;
-  rq->size++; // must be placed in end
 }
 
 void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
   if (IS_CALCULATION && (!finished_fork || pid < 3 || pid > 3 + FORK_NUM))
     return;
-  if (IS_LARGEWRITE && (pid != 3))
-    return;
   if (IS_YIELD_REPEAT && (!finished_fork || pid < 3 || pid > 3 + FORK_NUM))
+    return;
+  if (IS_LARGEWRITE && (pid != 3))
     return;
 
   acquire(&bufsize.lock);
@@ -161,10 +163,10 @@ void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
   release(&bufsize.lock);
 
   buf_log[index].clock       = rdtsc();
+  buf_log[index].cpu         = mycpuid();
   buf_log[index].event_name  = event_name;
   buf_log[index].prev_pstate = prev_pstate;
   buf_log[index].next_pstate = next_pstate;
-  buf_log[index].cpu         = mycpuid();
   buf_log[index].pid         = pid;
 }
 
@@ -440,7 +442,7 @@ void worksteal(struct runqueue *cur_rq) {
   struct runqueue *target = NULL;
   int maxsize             = 0;
 
-  // seek stealing target
+  // seek target
   for (int i = 0; i < NCPU; i++) {
     struct runqueue *rq = &runqueue[i];
     int size            = rq->size;
@@ -457,10 +459,12 @@ void worksteal(struct runqueue *cur_rq) {
 
   // steal process
   // target may be vanished by execution or stealing
-  // no cur_rq->lock needed : cur_rq is empty
   acquire(&target->lock);
-  if (target->size > 0)
+  if (target->size > 0) {
+    acquire(&cur_rq->lock);
     enqueue(cur_rq, dequeue(target));
+    release(&cur_rq->lock);
+  }
   release(&target->lock);
 }
 
@@ -485,34 +489,32 @@ void scheduler(void) {
 
     // current runqueue is empty
     // no need cur_rq->lock
-    // because empty rq is not edited by others
     acquire(&cur_rq->lock);
     if (cur_rq->size == 0) {
       release(&cur_rq->lock);
       worksteal(cur_rq);
+      continue;
     }
 
     // current runqueue is not empty
-    else {
-      p = dequeue(cur_rq);
-      release(&cur_rq->lock);
-      c->proc = p;
-      switchuvm(p);
+    p = dequeue(cur_rq);
+    release(&cur_rq->lock);
+    c->proc = p;
+    switchuvm(p);
 
-      acquire(&is_first_running.lock);
-      if (is_first_running.value[p->pid]) {
-        clock_log[p->pid][1]           = rdtsc();
-        is_first_running.value[p->pid] = 0;
-      }
-      release(&is_first_running.lock);
-
-      acquire(&ptable.lock);
-      p->state = RUNNING;
-      swtch(&(c->scheduler), p->context);
-      release(&ptable.lock);
-      switchkvm();
-      c->proc = 0;
+    acquire(&is_first_running.lock);
+    if (is_first_running.value[p->pid]) {
+      clock_log[p->pid][1]           = rdtsc();
+      is_first_running.value[p->pid] = 0;
     }
+    release(&is_first_running.lock);
+
+    acquire(&ptable.lock);
+    p->state = RUNNING;
+    swtch(&(c->scheduler), p->context);
+    c->proc = 0;
+    release(&ptable.lock);
+    switchkvm();
   }
 
   // default round robin scheduler

@@ -1,0 +1,35 @@
+_environment:
+  LOGSIZE: 500
+  NCPU: 1
+  NPROC: 15000
+  date: 2023/11/17 00:00
+  forknum: ''
+  policy: multiple
+  workload: largewrite
+balancing:
+  _data_pid03: 100.0
+  average: 100.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0
+  total(for debug): 100.0
+clock:
+  idle_average: 383573.4610778443
+  idle_size: 167
+  running_average: 3468696.0
+  running_size: 4
+cpu_usage:
+  _data_pid00: 17.80380814179089
+  average: 17.80380814179089
+  standard: 0.0
+  std/ave: 0.0
+time_response:
+  average: 2755648.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0
+time_turnaround:
+  average: 1675644640.0
+  size: 1
+  standard: 0.0
+  std/ave: 0.0

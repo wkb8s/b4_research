@@ -24,4 +24,6 @@ for POLICY in "${POLICIES[@]}" ; do
 	done
 done
 
+# draw graph
+# (need to prepare all logs)
 python3 scripts/plot.py $WORKLOAD $NCPU $LOGSIZE $FORK_NUM

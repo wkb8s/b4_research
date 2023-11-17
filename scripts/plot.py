@@ -22,9 +22,9 @@ elif (workload == "IS_LARGEWRITE"):
 x1 = [1, 2, 3]
 x2 = [1.3, 2.3, 3.3]
 
-category = ["time_turnaround", "cpu_usage", "balancing"]
-ytitle = ["turnaround time [clock]", "cpu usage [%]", "std of load balancing"]
-index = ["average", "average", "standard"]
+category = ["time_turnaround", "cpu_usage", "runtime", "balancing"]
+index = ["average", "average", "standard", "standard"]
+ytitle = ["turnaround time [clock]", "cpu usage [%]", "std of cpu time per cpu", "std of cpu time per process"]
 
 for i in range(len(category)):
     y = {}

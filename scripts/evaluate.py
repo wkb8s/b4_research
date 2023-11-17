@@ -148,6 +148,17 @@ turnaroundtime["standard"] = float(np.std(turnaround))
 turnaroundtime["std/ave"] = float(np.std(turnaround) / np.mean(turnaround) * 100)
 summary["time_turnaround"] = turnaroundtime
 
+sum_run = []
+for i in range(NCPU):
+    if running_clock[i] != 0:
+        sum_run.append(running_clock[i])
+runtime = {}
+runtime["standard"] = float(np.std(sum_run))
+for i in range(NCPU):
+    if running_clock[i] != 0:
+        runtime["_data_pid" + "{:0=2}".format(i)] = running_clock[i]
+summary["runtime"] = runtime
+
 clock = {}
 clock["running_size"] = cnt_running
 clock["running_average"] = float(sum_running / cnt_running)
