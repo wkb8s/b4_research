@@ -147,11 +147,13 @@ void enqueue(struct runqueue *rq, struct proc *p) {
 }
 
 void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
-  if (IS_CALCULATION && (!finished_fork || pid < 3 || pid > 3 + FORK_NUM))
+  if (IS_CALCULATION &&
+      (!finished_fork || pid < PARENT_PID || pid > PARENT_PID + FORK_NUM))
     return;
-  if (IS_YIELD_REPEAT && (!finished_fork || pid < 3 || pid > 3 + FORK_NUM))
+  if (IS_YIELD_REPEAT &&
+      (!finished_fork || pid < PARENT_PID || pid > PARENT_PID + FORK_NUM))
     return;
-  if (IS_LARGEWRITE && (pid != 3))
+  if (IS_LARGEWRITE && (pid != PARENT_PID))
     return;
 
   acquire(&bufsize.lock);

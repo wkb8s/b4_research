@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NCPU=8
+NCPU=7
 FORK_NUM=32
 CALC_NUM=32
 LOGSIZE=500

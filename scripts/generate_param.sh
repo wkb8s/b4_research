@@ -15,4 +15,5 @@ cat << EOF
 #define NBUF (MAXOPBLOCKS * 3)
 #define FSSIZE 1000
 #define LOG_SIZE $3
+#define PARENT_PID 3 + 1 // why pid increments when executing taskset?
 EOF

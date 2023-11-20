@@ -225,7 +225,7 @@ ifndef CPUS
 
 # CPU NUM
 # also need to modify 'NCPU' in param.h
-CPUS := 8
+CPUS := 7
 
 endif
 QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=xv6.img,index=0,media=disk,format=raw -smp $(CPUS),sockets=$(CPUS),cores=1,threads=1 -m 512 $(QEMUEXTRA)
@@ -240,7 +240,7 @@ qemu-memfs: xv6memfs.img
 # $(QEMU) -enable-kvm -nographic $(QEMUOPTS)
 # must include taskset
 qemu-nox: fs.img xv6.img
-	$(QEMU) -nographic $(QEMUOPTS)
+	$(QEMU) -name xvtest,debug-threads=yes -nographic $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@

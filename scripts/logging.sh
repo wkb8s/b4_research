@@ -2,7 +2,8 @@
 
 LOG_PATH=/home/waka/b4_research/log/tmp.log
 MAKEFILE_PATH=/home/waka/b4_research/src/Makefile
-
+XV6_BOOT_TIME=3
+VCPU_PINNING_TIME=1
 NPROC=$1
 NCPU=$2
 LOG_SIZE=$3
@@ -18,10 +19,13 @@ sed -i "s/CPUS\ :=\ [0-9]*/CPUS\ :=\ $NCPU/" $MAKEFILE_PATH
 ./scripts/generate_param.sh $NPROC $NCPU $LOG_SIZE > src/param.h
 ./scripts/generate_flag.sh $POLICY $WORKLOAD $FORK_NUM $CALC_NUM > src/flags.h
 
-if [ $3 == "IS_ROUNDROBIN" ]; then
-  (cd src && timeout 7s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
+# run xv6
+if [ $3 != "IS_ROUNDROBIN" ]; then
+  sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
+    | sh -c "cd src && timeout 13 make --silent qemu-nox | tee $LOG_PATH"
 else
-  (cd src && timeout 10s make --silent qemu-nox < ../scripts/input.txt) | tee $LOG_PATH
+  sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
+    | sh -c "cd src && timeout 19 make --silent qemu-nox | tee $LOG_PATH"
 fi
 
 # delete unnecessary information
@@ -34,4 +38,5 @@ while IFS= read -r line; do
   fi
 done < "$LOG_PATH"
 
+# save logs
 python3 scripts/evaluate.py

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+qemu_pid=$(pgrep qemu-system-i38)
+pids=()
+pCPU=0
+CPU_MAX=$1
+
+if [ -z "qemu_pid" ]; then
+		echo "qemu not exists"
+		exit
+fi
+
+for pid_dir in /proc/${qemu_pid}/task/*/; do
+  pid=$(basename "$pid_dir")
+  if [[ $(<"$pid_dir/comm") == *CPU* ]]; then
+    pids+=("$pid")
+		taskset -cp $(((pCPU++ % CPU_MAX) + 1)) ${pid}
+		echo -e "pinned vCPU ${pid}"
+  fi
+
+done
+
+if [ ${#pids[@]} -eq 0 ]; then
+  echo "No vCPU processes"
+fi
