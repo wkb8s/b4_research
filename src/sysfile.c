@@ -424,17 +424,17 @@ void print_in_hex(unsigned int n) {
 }
 
 int sys_bufwrite(void) {
-  writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE);
+  /* writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE); */
   yield();
   return 0;
 }
 
 int sys_waitfork(void) {
-  if (myproc()->pid == 3 + 32) {
+  if (myproc()->pid == PARENT_PID + FORK_NUM) {
     finished_fork = 1;
   }
   while (finished_fork == 0) {
-    writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE);
+    /* writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE); */
     yield();
   }
   return 0;

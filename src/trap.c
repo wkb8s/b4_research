@@ -33,11 +33,12 @@ void trap(struct trapframe *tf) {
   if (tf->trapno == T_SYSCALL) {
     if (myproc()->killed)
       exit();
+    /* writelog(myproc()->pid, TICK, RUNNING, RUNNABLE); */
     myproc()->tf = tf;
     syscall();
     if (myproc()->killed)
       exit();
-    /* writelog(myproc()->pid, myproc()->name, TICK, RUNNABLE, RUNNING); */
+    /* writelog(myproc()->pid, TICK, RUNNABLE, RUNNING); */
     return;
   }
 
@@ -82,7 +83,6 @@ void trap(struct trapframe *tf) {
       }
 
       if ((tf->cs & 3) == 0) {
-
         // In kernel, it must be our mistake.
         cprintf("unexpected trap2 %d from cpu %d eip %x (cr2=0x%x)\n",
                 tf->trapno, cpuid(), tf->eip, rcr2());
@@ -108,7 +108,7 @@ void trap(struct trapframe *tf) {
   // If interrupts were on while locks held, would need to check nlock.
   if (myproc() && myproc()->state == RUNNING &&
       tf->trapno == T_IRQ0 + IRQ_TIMER) {
-    writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE);
+    /* writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE); */
     yield();
   }
 

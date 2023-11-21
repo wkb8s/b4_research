@@ -2,7 +2,7 @@ _environment:
   LOGSIZE: 500
   NCPU: 7
   NPROC: 5000
-  date: 2023/11/20 05:32
+  date: 2023/11/21 05:41
   forknum: ''
   policy: multiple
   workload: largewrite
@@ -14,35 +14,40 @@ balancing:
   std/ave: 0.0
   total(for debug): 100.0
 clock:
-  idle_average: 16215649.170731707
-  idle_size: 164
-  running_average: 5448754.666666667
-  running_size: 12
+  idle_average: 16811436.307692308
+  idle_size: 13
+  running_average: 17297866.666666668
+  running_size: 15
 cpu_usage:
-  _data_pid01: 5.576769119215667
-  _data_pid02: 0.33216191490100555
-  _data_pid03: 5.9918154230051925
-  _data_pid04: 0.3241947769417306
-  _data_pid05: 0.42019210197034507
-  _data_pid06: 3.7700828256791237
-  average: 2.399670411047243
-  standard: 2.310720884426253
-  std/ave: 96.29326068232132
+  _data_pid00: 82.71311647198544
+  _data_pid01: 4.177383815670255
+  _data_pid02: 57.42919057936111
+  _data_pid03: 47.62259380865362
+  _data_pid04: 79.42469359462154
+  _data_pid05: 17.38170871608119
+  _data_pid06: 29.15753942766283
+  average: 54.280115150460695
+  standard: 29.271742959742085
+  std/ave: 53.927193924704945
 runtime:
-  _data_pid01: 22696608
-  _data_pid02: 1196800
-  _data_pid03: 25965280
-  _data_pid04: 1372192
-  _data_pid05: 1683040
-  _data_pid06: 12471136
-  standard: 10315640.39101549
+  _data_pid00: 30.372095165511965
+  _data_pid01: 2.921548688519989
+  _data_pid02: 10.669237307103014
+  _data_pid03: 6.331965251734931
+  _data_pid04: 0.9630905834101575
+  _data_pid05: 19.18854985509562
+  _data_pid06: 29.553513148624326
+  average: 14.285714285714286
+  standard: 11.331956835267693
+  std/ave: 79.32369784687386
+  total(for debug): 100.0
 time_response:
-  average: 7485296.0
+  average: 8474704.0
   size: 2
-  standard: 141008.0
-  std/ave: 1.8837999192015922
+  standard: 321392.0
+  std/ave: 3.7923684414228513
 time_turnaround:
-  average: 2296635120.0
+  average: 2248881216.0
   size: 2
-  standard: 2283534992.0
-  std/ave: 99.42959471942588
+  standard: 2235153856.0
+  std/ave: 99.38959159326271

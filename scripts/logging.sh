@@ -22,10 +22,10 @@ sed -i "s/CPUS\ :=\ [0-9]*/CPUS\ :=\ $NCPU/" $MAKEFILE_PATH
 # run xv6
 if [ $3 != "IS_ROUNDROBIN" ]; then
   sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
-    | sh -c "cd src && timeout 13 make --silent qemu-nox | tee $LOG_PATH"
+    | sh -c "cd src && timeout 15 make --silent qemu-nox | tee $LOG_PATH"
 else
   sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
-    | sh -c "cd src && timeout 19 make --silent qemu-nox | tee $LOG_PATH"
+    | sh -c "cd src && timeout 20 make --silent qemu-nox | tee $LOG_PATH"
 fi
 
 # delete unnecessary information

@@ -217,6 +217,9 @@ void fork_calc() {
 
     // child
     if (pid == 0) {
+      // wait until all processes are forked
+      waitfork();
+
       calculation();
       exit();
     }

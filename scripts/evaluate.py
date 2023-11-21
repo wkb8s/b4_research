@@ -43,7 +43,8 @@ df_clock = pd.read_csv(logclock_path, header=0)
 
 # use decimal and elapsed clock
 df['clock'] = df['clock'].apply(lambda x: int(x, 16))
-df['clock'] -= df['clock'][0]
+df = df.sort_values('clock')
+df['clock'] -= df['clock'].min()
 df_clock['fork'] = df_clock['fork'].apply(lambda x: int(x, 16))
 df_clock['run'] = df_clock['run'].apply(lambda x: int(x, 16))
 df_clock['exit'] = df_clock['exit'].apply(lambda x: int(x, 16))
@@ -72,7 +73,6 @@ for line in df.itertuples(name=None, index=False):
     start_clock[cpuid] = clock
 
 summary = {}
-
 output_name = "log/" + workload + "/" + policy \
     + "_cpu" + str(NCPU) + "_nproc" + str(PROC_MAX) + "_fork" \
     + str(FORK_NUM) + "_logsize" + str(LOGSIZE)
@@ -87,32 +87,77 @@ env["workload"] = workload
 env["date"] = datetime.now().strftime("%Y/%m/%d %H:%M")
 summary["_environment"] = env
 
-clock_start = [0] * NPROC
-clock_sum = [0] * NPROC
-balance_rate = []
+SIZE = 100
+clock_start = [-1] * SIZE
+clock_start_cpu = [-1] * SIZE
+clock_sum = [0] * SIZE
 clock_total = 0
+
+# [0]: clock, [1]: cpu, [2]: pid, [3]: pstate_prev, [4]: pstate_next
+# for ep in df.itertuples(name=None, index=False):
+#     pid = ep[2]
+#     # skip blank data
+#     if (pid == 0):
+#         continue
+#     pid -= 1
+
+#     # RUNNABLE -> RUNNING
+#     if (ep[4] == 4):
+#         clock_start[pid] = ep[0]
+#         clock_start_cpu[pid] = ep[1]
+
+#     # RUNNING -> RUNNABLE, SLEEPING
+#     if (ep[3] == 4):
+#         if (clock_start[pid] == -1):
+#             continue
+#         if (clock_start_cpu[pid] != ep[1]):
+#             print("pid %d is wrong" %(pid))
+#             exit(1)
+#             # continue
+#         # print("pid %2d added : %d - %d" %(pid, ep[0], clock_start[pid]))
+#         clock_sum[pid] += ep[0] - clock_start[pid]
+#         clock_total += ep[0] - clock_start[pid]
+
+cpu_clock_sum = [0] * NCPU
+idx = -1
+start_point = [] # start points of line
+sp_idx = [0] * NPROC # index of start point
+# draw line segment
 # [0]: clock, [1]: cpu, [2]: pid, [3]: pstate_prev, [4]: pstate_next
 for ep in df.itertuples(name=None, index=False):
     pid = ep[2]
+    cpuid = ep[1]
     # skip blank data
     if (pid == 0):
         continue
 
-    if (ep[4] == 4):
-        clock_start[pid] = ep[0]
+    found_samepid = False
 
-    if (ep[3] == 4):
-        if (clock_start[pid] == 0):
-            continue
-        clock_sum[pid] += ep[0] - clock_start[pid]
-        clock_total += ep[0] - clock_start[pid]
+    for sp in start_point:
+        if (sp[2] == pid):
+            found_samepid = True
 
+            if (sp[1] == ep[1] and sp[4] == 4 and ep[3] == 4):
+                clock_sum[pid] += ep[0] - sp[0]
+                cpu_clock_sum[cpuid] += ep[0] - sp[0]
+                clock_total += ep[0] - sp[0]
+
+            # update start_point
+            start_point[sp_idx[pid]] = ep
+
+    if (not found_samepid):
+        start_point.append(ep)
+        idx += 1
+        sp_idx[pid] = idx
+
+balance_rate = []
 balancing = {}
-for i in range(NPROC):
+for i in range(SIZE):
     if (clock_sum[i] == 0):
         continue;
-    balance_rate.append(clock_sum[i] / clock_total * 100)
-    balancing["_data_pid" + "{:0=2}".format(i)] = clock_sum[i] / clock_total * 100
+    tmp = clock_sum[i] / clock_total * 100
+    balance_rate.append(tmp)
+    balancing["_data_pid" + "{:0=2}".format(i)] = tmp
 balancing["size"] = len(balance_rate)
 balancing["average"] = float(np.mean(balance_rate))
 balancing["standard"] = float(np.std(balance_rate))
@@ -150,13 +195,16 @@ summary["time_turnaround"] = turnaroundtime
 
 sum_run = []
 for i in range(NCPU):
-    if running_clock[i] != 0:
-        sum_run.append(running_clock[i])
+    if cpu_clock_sum[i] != 0:
+        sum_run.append(cpu_clock_sum[i] / sum(cpu_clock_sum) * 100)
 runtime = {}
+runtime["average"] = float(np.mean(sum_run))
 runtime["standard"] = float(np.std(sum_run))
+runtime["std/ave"] = float(np.std(sum_run) / np.mean(sum_run) * 100)
+runtime["total(for debug)"] = sum(sum_run)
 for i in range(NCPU):
-    if running_clock[i] != 0:
-        runtime["_data_pid" + "{:0=2}".format(i)] = running_clock[i]
+    if cpu_clock_sum[i] != 0:
+        runtime["_data_pid" + "{:0=2}".format(i)] = cpu_clock_sum[i] / sum(cpu_clock_sum) * 100
 summary["runtime"] = runtime
 
 clock = {}

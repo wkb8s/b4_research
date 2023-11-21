@@ -191,12 +191,11 @@ static struct proc *allocproc(void) {
   return 0;
 
 found:
-  p->pid = nextpid++;
-
-  writelog(p->pid, ALLOCPROC, p->state, EMBRYO);
+  p->pid   = nextpid++;
   p->state = EMBRYO;
 
   release(&ptable.lock);
+  writelog(p->pid, ALLOCPROC, p->state, EMBRYO);
 
   // Allocate kernel stack.
   if ((p->kstack = kalloc()) == 0) {
@@ -413,8 +412,6 @@ int wait(void) {
 
       // Found one.
       if (p->state == ZOMBIE) {
-        writelog(p->pid, WAIT, p->state, UNUSED);
-
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
@@ -425,6 +422,7 @@ int wait(void) {
         p->killed  = 0;
         p->state   = UNUSED;
         release(&ptable.lock);
+        writelog(pid, WAIT, ZOMBIE, UNUSED);
         return pid;
       }
     }
@@ -574,11 +572,10 @@ void sched(void) {
 
 // Give up the CPU for one scheduling round.
 void yield(void) {
-  struct proc *curproc = myproc();
-
-  /* writelog(curproc->pid, curproc->name, YIELD, curproc->state, RUNNABLE); */
+  struct proc *curproc    = myproc();
   struct runqueue *cur_rq = &runqueue[mycpuid()];
 
+  writelog(curproc->pid, YIELD, curproc->state, RUNNABLE);
   acquire(&ptable.lock); // DOC: yieldlock
 
   // enqueue
@@ -589,12 +586,10 @@ void yield(void) {
   }
 
   curproc->state = RUNNABLE;
-
   sched();
-  /* curproc = myproc(); */
-  writelog(myproc()->pid, TICK, RUNNABLE, RUNNING);
+  curproc = myproc();
   release(&ptable.lock);
-  /* writelog(curproc->pid, curproc->name, TICK, RUNNABLE, RUNNING); */
+  writelog(curproc->pid, TICK, RUNNABLE, RUNNING);
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -645,13 +640,9 @@ void sleep(void *chan, struct spinlock *lk) {
   }
   // Go to sleep.
   p->chan = chan;
-
   writelog(p->pid, SLEEP, p->state, SLEEPING);
-
   p->state = SLEEPING;
-
   sched();
-  writelog(myproc()->pid, TICK, RUNNABLE, RUNNING);
 
   // Tidy up.
   p->chan = 0;
@@ -661,7 +652,6 @@ void sleep(void *chan, struct spinlock *lk) {
     release(&ptable.lock);
     acquire(lk);
   }
-  /* writelog(p->pid, p->name, TICK, RUNNABLE, RUNNING); */
 }
 
 // PAGEBREAK!
@@ -672,7 +662,6 @@ static void wakeup1(void *chan) {
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == SLEEPING && p->chan == chan) {
-      // added
       writelog(p->pid, WAKEUP, p->state, RUNNABLE);
 
       if (IS_MULTIPLE_RUNQUEUE) {
@@ -686,6 +675,20 @@ static void wakeup1(void *chan) {
     }
 }
 
+// necessary?
+struct proc *wakeup2(void *chan) {
+  struct proc *p;
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state == SLEEPING && p->chan == chan) {
+      writelog(p->pid, WAKEUP, p->state, RUNNABLE);
+      p->state = RUNNABLE;
+      return p;
+    }
+  }
+  return NULL;
+}
+
 // Wake up all processes sleeping on chan.
 void wakeup(void *chan) {
   // added
@@ -693,8 +696,16 @@ void wakeup(void *chan) {
     panic("already locked!\n");
 
   acquire(&ptable.lock);
+  /* struct proc *p = wakeup2(chan); */
   wakeup1(chan);
   release(&ptable.lock);
+
+  /* if (IS_MULTIPLE_RUNQUEUE && p != NULL) { */
+  /*   struct runqueue *cur_rq = &runqueue[mycpuid()]; */
+  /*   acquire(&cur_rq->lock); */
+  /*   enqueue(cur_rq, p); */
+  /*   release(&cur_rq->lock); */
+  /* } */
 }
 
 // Kill the process with the given pid.
