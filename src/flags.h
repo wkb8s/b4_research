@@ -8,3 +8,6 @@
 #define FORK_NUM 32
 #define CALC_NUM 32
 #define CALC_LOOP 100000000
+
+extern int context_switch_num;
+extern int steal_num;

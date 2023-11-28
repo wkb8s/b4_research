@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [[ $# -lt 1 ]]; then
+  echo "usage: ./scripts/vcpupin CPU_MAX"
+  exit 1
+fi
+
 qemu_pid=$(pgrep qemu-system-i38)
 pids=()
 pCPU=0

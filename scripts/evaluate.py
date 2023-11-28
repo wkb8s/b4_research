@@ -12,6 +12,7 @@ NCPU = NPROC = PROC_MAX = LOGSIZE = 0
 policy = ''
 workload = ''
 FORK_NUM = ''
+cnt_contextswitch = cnt_worksteal = 0
 input_path = 'log/tmp.log'
 logfile_path = 'log/log.csv'
 logclock_path = 'log/clock.csv'
@@ -33,6 +34,12 @@ for line in input_file.itertuples(name=None, index=False):
         workload = line[1]
     if (line[0] == "forknum"):
         FORK_NUM = int(line[1])
+
+
+    if (line[0] == "cnt_worksteal"):
+        cnt_worksteal = int(line[1])
+    if (line[0] == "cnt_contextswitch"):
+        cnt_contextswitch = int(line[1])
 NCPU += 1
 
 input_file.iloc[:LOGSIZE:].to_csv(logfile_path, index=False)
@@ -86,6 +93,11 @@ env["LOGSIZE"] = LOGSIZE
 env["workload"] = workload
 env["date"] = datetime.now().strftime("%Y/%m/%d %H:%M")
 summary["_environment"] = env
+
+cnt = {}
+cnt["contextswitch"] = cnt_contextswitch
+cnt["worksteal"] = cnt_worksteal
+summary["counters"] = cnt
 
 SIZE = 100
 clock_start = [-1] * SIZE

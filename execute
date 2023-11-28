@@ -1,0 +1,36 @@
+#!/bin/bash
+set u
+
+NPROCS=(
+	"15000"
+	"5000"
+	"100"
+)
+WORKLOADS=(
+	"IS_CALCULATION"
+	"IS_LARGEWRITE"
+	"IS_YIELD_REPEAT"
+)
+POLICIES=(
+	"IS_ROUNDROBIN"
+	"IS_MULTIPLE_RUNQUEUE"
+)
+
+NCPU=7
+FORK_NUM=32
+CALC_NUM=32
+LOGSIZE=500
+WORKLOAD=${WORKLOADS[2]}
+
+# execute and record
+for POLICY in "${POLICIES[@]}" ; do
+	for NPROC in "${NPROCS[@]}" ; do
+		./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM
+	done
+done
+
+# draw graph
+# (need to prepare all logs)
+python3 scripts/plot.py $WORKLOAD $NCPU $LOGSIZE $FORK_NUM
+
+exit 0

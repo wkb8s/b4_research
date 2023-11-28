@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [[ $# -lt 3 ]]; then
+  echo "usage: ./scripts/generate_param NPROC NCPU LOG_SIZE"
+  exit 1
+fi
+
 cat << EOF
 #define NPROC $1
 #define KSTACKSIZE 4096

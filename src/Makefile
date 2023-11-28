@@ -240,6 +240,9 @@ qemu-memfs: xv6memfs.img
 # $(QEMU) -enable-kvm -nographic $(QEMUOPTS)
 # must include taskset
 qemu-nox: fs.img xv6.img
+	$(QEMU) -name xvtest,debug-threads=yes -nographic $(QEMUOPTS) # -S -s
+
+qemu-nox-gdb2: fs.img xv6.img
 	$(QEMU) -name xvtest,debug-threads=yes -nographic $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl

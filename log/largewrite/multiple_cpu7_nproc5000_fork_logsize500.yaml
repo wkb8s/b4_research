@@ -2,7 +2,7 @@ _environment:
   LOGSIZE: 500
   NCPU: 7
   NPROC: 5000
-  date: 2023/11/21 05:41
+  date: 2023/11/28 07:37
   forknum: ''
   policy: multiple
   workload: largewrite
@@ -14,40 +14,42 @@ balancing:
   std/ave: 0.0
   total(for debug): 100.0
 clock:
-  idle_average: 16811436.307692308
-  idle_size: 13
-  running_average: 17297866.666666668
-  running_size: 15
+  idle_average: 14277656.975609757
+  idle_size: 164
+  running_average: 7473627.076923077
+  running_size: 13
+counters:
+  contextswitch: 4583
+  worksteal: 2292
 cpu_usage:
-  _data_pid00: 82.71311647198544
-  _data_pid01: 4.177383815670255
-  _data_pid02: 57.42919057936111
-  _data_pid03: 47.62259380865362
-  _data_pid04: 79.42469359462154
-  _data_pid05: 17.38170871608119
-  _data_pid06: 29.15753942766283
-  average: 54.280115150460695
-  standard: 29.271742959742085
-  std/ave: 53.927193924704945
+  _data_pid00: 4.435820593118774
+  _data_pid01: 0.6409944756719997
+  _data_pid02: 3.9761328094760637
+  _data_pid03: 7.8440151228449535
+  _data_pid04: 6.887477042536021
+  _data_pid05: 0.2200896424587519
+  average: 3.9839847058790956
+  standard: 2.6424233903721794
+  std/ave: 66.32614293104093
 runtime:
-  _data_pid00: 30.372095165511965
-  _data_pid01: 2.921548688519989
-  _data_pid02: 10.669237307103014
-  _data_pid03: 6.331965251734931
-  _data_pid04: 0.9630905834101575
-  _data_pid05: 19.18854985509562
-  _data_pid06: 29.553513148624326
+  _data_pid00: 13.686488825985698
+  _data_pid01: 14.281972947452873
+  _data_pid02: 16.68184449691016
+  _data_pid03: 23.04774832321942
+  _data_pid04: 21.723597881609795
+  _data_pid05: 10.178748741414307
+  _data_pid06: 0.3995987834077525
   average: 14.285714285714286
-  standard: 11.331956835267693
-  std/ave: 79.32369784687386
+  standard: 7.0496934859828135
+  std/ave: 49.347854401879694
   total(for debug): 100.0
 time_response:
-  average: 8474704.0
+  average: 8244176.0
   size: 2
-  standard: 321392.0
-  std/ave: 3.7923684414228513
+  standard: 692880.0
+  std/ave: 8.404478507009069
 time_turnaround:
-  average: 2248881216.0
+  average: 2228587056.0
   size: 2
-  standard: 2235153856.0
-  std/ave: 99.38959159326271
+  standard: 2215155088.0
+  std/ave: 99.3972877135835

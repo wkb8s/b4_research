@@ -2,7 +2,7 @@ _environment:
   LOGSIZE: 500
   NCPU: 7
   NPROC: 5000
-  date: 2023/11/21 05:40
+  date: 2023/11/28 07:36
   forknum: ''
   policy: default
   workload: largewrite
@@ -14,39 +14,42 @@ balancing:
   std/ave: 0.0
   total(for debug): 100.0
 clock:
-  idle_average: 47103416.0
-  idle_size: 16
-  running_average: 19344304.842105262
-  running_size: 19
+  idle_average: 17825895.563636363
+  idle_size: 165
+  running_average: 6835916.0
+  running_size: 16
+counters:
+  contextswitch: 3965
+  worksteal: 0
 cpu_usage:
-  _data_pid00: 70.35758631971333
-  _data_pid01: 13.109983069224782
-  _data_pid02: 74.60796269020308
-  _data_pid03: 55.27095187102054
-  _data_pid04: 36.78827530281867
-  _data_pid05: 100.0
-  average: 32.7812126639916
-  standard: 35.02780210093285
-  std/ave: 106.85328349493612
+  _data_pid00: 0.24187006149797166
+  _data_pid01: 0.7188748324013846
+  _data_pid02: 3.6673150482001637
+  _data_pid03: 14.225220947326982
+  _data_pid04: 0.2785873485334627
+  _data_pid05: 1.984787261475375
+  average: 3.5852932442972474
+  standard: 4.568612566437554
+  std/ave: 127.42646849610892
 runtime:
-  _data_pid00: 17.179122169728593
-  _data_pid01: 6.229821552748364
-  _data_pid02: 20.022854405358945
-  _data_pid03: 31.13829133122646
-  _data_pid04: 2.0114469929976395
-  _data_pid05: 19.197836986466836
-  _data_pid06: 4.220626561473164
+  _data_pid00: 11.704009916816629
+  _data_pid01: 10.23358070176915
+  _data_pid02: 19.218700499958057
+  _data_pid03: 33.34545879347871
+  _data_pid04: 9.848172046163256
+  _data_pid05: 15.46579819415703
+  _data_pid06: 0.18427984765716654
   average: 14.285714285714286
-  standard: 9.756213585144163
-  std/ave: 68.29349509600914
+  standard: 9.491560387231875
+  std/ave: 66.44092271062311
   total(for debug): 100.0
 time_response:
-  average: 6148272.0
+  average: 6220976.0
   size: 2
-  standard: 466256.0
-  std/ave: 7.583529160713774
+  standard: 434064.0
+  std/ave: 6.977426050188909
 time_turnaround:
-  average: 2801583744.0
+  average: 2787624800.0
   size: 2
-  standard: 2789831296.0
-  std/ave: 99.58050698912108
+  standard: 2777227040.0
+  std/ave: 99.62700288790658

@@ -490,8 +490,13 @@ int sys_bufread(void) {
     cprintf("workload,%s\n", "calculation");
     cprintf("forknum,%d\n", FORK_NUM);
   }
-  if (IS_LARGEWRITE)
+  if (IS_LARGEWRITE) {
     cprintf("workload,%s\n", "largewrite");
+  }
+
+  // counter
+  cprintf("cnt_contextswitch,%d\n", context_switch_num);
+  cprintf("cnt_worksteal,%d\n", steal_num);
 
   cprintf("\n");
   return 0;

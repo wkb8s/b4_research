@@ -2,7 +2,7 @@ _environment:
   LOGSIZE: 500
   NCPU: 7
   NPROC: 15000
-  date: 2023/11/21 05:40
+  date: 2023/11/28 07:36
   forknum: ''
   policy: default
   workload: largewrite
@@ -14,40 +14,43 @@ balancing:
   std/ave: 0.0
   total(for debug): 100.0
 clock:
-  idle_average: 84899417.45454545
-  idle_size: 44
-  running_average: 29934483.636363637
-  running_size: 44
+  idle_average: 49610798.52873563
+  idle_size: 174
+  running_average: 8302492.097560976
+  running_size: 41
+counters:
+  contextswitch: 4531
+  worksteal: 0
 cpu_usage:
-  _data_pid00: 41.39703596525179
-  _data_pid01: 44.85510528502537
-  _data_pid02: 32.62502584984389
-  _data_pid03: 42.24506179038244
-  _data_pid04: 28.410930890631082
-  _data_pid05: 40.81833593514098
-  _data_pid06: 1.2770723827380368
-  average: 26.067636257228415
-  standard: 15.722205275028568
-  std/ave: 60.31312206402637
+  _data_pid00: 2.7508304484181965
+  _data_pid01: 1.9832417609864668
+  _data_pid02: 5.837798122831347
+  _data_pid03: 4.344407981623814
+  _data_pid04: 2.40343230407135
+  _data_pid05: 4.668779552252148
+  _data_pid06: 4.736622869879925
+  average: 3.7937621035171705
+  standard: 1.3328081734667516
+  std/ave: 35.13156958975141
 runtime:
-  _data_pid00: 16.43125323327608
-  _data_pid01: 11.84805613181439
-  _data_pid02: 22.896691742849434
-  _data_pid03: 21.841321875102622
-  _data_pid04: 11.768054113916971
-  _data_pid05: 5.155147280335923
-  _data_pid06: 10.059475622704582
-  average: 14.285714285714288
-  standard: 5.968352408208388
-  std/ave: 41.77846685745871
-  total(for debug): 100.00000000000001
+  _data_pid00: 14.219572654427079
+  _data_pid01: 9.898956105386906
+  _data_pid02: 21.14394650827872
+  _data_pid03: 15.42703046722006
+  _data_pid04: 12.549092301072992
+  _data_pid05: 19.231317149608294
+  _data_pid06: 7.530084814005942
+  average: 14.285714285714283
+  standard: 4.483291951501024
+  std/ave: 31.383043660507177
+  total(for debug): 99.99999999999999
 time_response:
-  average: 5869872.0
+  average: 7964272.0
   size: 2
-  standard: 557296.0
-  std/ave: 9.49417636364132
+  standard: 710256.0
+  std/ave: 8.91802791265793
 time_turnaround:
-  average: 8157791584.0
+  average: 7887848080.0
   size: 2
-  standard: 8146332288.0
-  std/ave: 99.85952943413662
+  standard: 7861203760.0
+  std/ave: 99.66221053283775

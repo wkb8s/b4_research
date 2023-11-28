@@ -2,7 +2,7 @@ _environment:
   LOGSIZE: 500
   NCPU: 7
   NPROC: 100
-  date: 2023/11/21 05:42
+  date: 2023/11/28 07:37
   forknum: ''
   policy: multiple
   workload: largewrite
@@ -14,40 +14,42 @@ balancing:
   std/ave: 0.0
   total(for debug): 100.0
 clock:
-  idle_average: 24930292.57142857
-  idle_size: 14
-  running_average: 10693269.333333334
-  running_size: 15
+  idle_average: 14282060.36809816
+  idle_size: 163
+  running_average: 6869612.8
+  running_size: 10
+counters:
+  contextswitch: 4551
+  worksteal: 2274
 cpu_usage:
-  _data_pid00: 45.963130450639156
-  _data_pid01: 33.80100990834529
-  _data_pid02: 17.531001936888497
-  _data_pid03: 12.459754002433769
-  _data_pid04: 96.19614712697566
-  _data_pid05: 21.765846455334593
-  _data_pid06: 65.78999425793117
-  average: 31.486406616600938
-  standard: 29.83352783764112
-  std/ave: 94.75050043313502
+  _data_pid01: 0.3255504891964347
+  _data_pid02: 0.2540200203718617
+  _data_pid03: 0.31957501898720503
+  _data_pid04: 5.385568455178438
+  _data_pid05: 7.600635579396356
+  _data_pid06: 14.84574355838663
+  average: 2.8663133260296054
+  standard: 5.2376743804417325
+  std/ave: 182.73209466938906
 runtime:
-  _data_pid00: 24.57444936851236
-  _data_pid01: 3.2741599056773056
-  _data_pid02: 22.84576891465004
-  _data_pid03: 9.795607902589234
-  _data_pid04: 2.121078968997629
-  _data_pid05: 35.38015739705776
-  _data_pid06: 2.0087775425156744
+  _data_pid00: 11.87498727222632
+  _data_pid01: 11.845389096061657
+  _data_pid02: 7.0304176820601665
+  _data_pid03: 10.584411943380168
+  _data_pid04: 23.28593502665649
+  _data_pid05: 27.247190149265748
+  _data_pid06: 8.131668830349447
   average: 14.285714285714286
-  standard: 12.33013178248179
-  std/ave: 86.31092247737251
+  standard: 7.220821728218498
+  std/ave: 50.54575209752949
   total(for debug): 100.0
 time_response:
-  average: 8100512.0
+  average: 8478576.0
   size: 2
-  standard: 111456.0
-  std/ave: 1.3759130287073211
+  standard: 83376.0
+  std/ave: 0.983372679563172
 time_turnaround:
-  average: 2207724512.0
+  average: 2047586960.0
   size: 2
-  standard: 2195274816.0
-  std/ave: 99.43608471381596
+  standard: 2034775920.0
+  std/ave: 99.37433475352861

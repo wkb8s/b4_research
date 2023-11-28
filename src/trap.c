@@ -7,6 +7,7 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "syscall.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -33,7 +34,7 @@ void trap(struct trapframe *tf) {
   if (tf->trapno == T_SYSCALL) {
     if (myproc()->killed)
       exit();
-    /* writelog(myproc()->pid, TICK, RUNNING, RUNNABLE); */
+
     myproc()->tf = tf;
     syscall();
     if (myproc()->killed)
@@ -110,6 +111,7 @@ void trap(struct trapframe *tf) {
       tf->trapno == T_IRQ0 + IRQ_TIMER) {
     /* writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE); */
     yield();
+    /* writelog(myproc()->pid, TICK, RUNNABLE, RUNNING); */
   }
 
   // Check if the process has been killed since we yielded

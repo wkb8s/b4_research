@@ -1,0 +1,70 @@
+#!/bin/bash
+
+if [[ $# -lt 7 ]]; then
+  echo "usage: ./scripts/logging NCPU NPROC POLICY LOGSIZE WORKLOAD FORK_NUM CALC_NUM"
+  exit 1
+fi
+
+NCPU=$1
+NPROC=$2
+POLICY=$3
+LOG_SIZE=$4
+WORKLOAD=$5
+FORK_NUM=$6
+CALC_NUM=$7
+
+LOG_PATH=log/tmp.log
+MAKEFILE_PATH=src/Makefile
+
+XV6_BOOT_TIME=2
+VCPU_PINNING_TIME=1
+# optimize timeout seconds
+if [ $WORKLOAD != "IS_LARGEWRITE" ]; then
+  TIMEOUT_SECONDS=6
+  if [ $POLICY == "IS_MULTIPLE_RUNQUEUE" ]; then
+    TIMEOUT_SECONDS=9
+  fi
+else
+  TIMEOUT_SECONDS=10
+  if [ $POLICY == "IS_MULTIPLE_RUNQUEUE" ]; then
+    TIMEOUT_SECONDS=13
+  fi
+fi
+
+# if [ $LOG_SIZE == "3000" ]; then
+# 		TIMEOUT_SECONDS=$(($TIMEOUT_SECONDS+6))
+
+# 		if [ $POLICY == "IS_MULTIPLE_RUNQUEUE" ]; then
+# 				TIMEOUT_SECONDS=$(($TIMEOUT_SECONDS+15))
+# 		fi
+# fi
+
+
+# edit Makefile
+sed -i "s/CPUS\ :=\ [0-9]*/CPUS\ :=\ $NCPU/" $MAKEFILE_PATH
+
+# generate header files
+./scripts/generate_param $NPROC $NCPU $LOG_SIZE > src/param.h
+./scripts/generate_flag $POLICY $WORKLOAD $FORK_NUM $CALC_NUM > src/flags.h
+
+# run xv6
+if [ $3 != "IS_ROUNDROBIN" ]; then
+  sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
+    | sh -c "cd src && timeout $TIMEOUT_SECONDS make --silent qemu-nox | tee ../$LOG_PATH"
+elif [ $3 != "IS_MULTIPLE_RUNQUEUE" ]; then
+  sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
+    | sh -c "cd src && timeout $TIMEOUT_SECONDS make --silent qemu-nox | tee ../$LOG_PATH"
+fi
+
+# delete unnecessary information
+found=false
+while IFS= read -r line; do
+  sed -i '1d' "$LOG_PATH"
+  if [[ $line == *"start printing"* ]]; then
+    found=true
+    break
+  fi
+done < "$LOG_PATH"
+
+# save logs
+python3 scripts/evaluate.py

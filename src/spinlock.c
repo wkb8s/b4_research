@@ -24,6 +24,8 @@ void acquire(struct spinlock *lk) {
   if (holding(lk))
     panic("acquire");
 
+  // start recording
+
   // The xchg is atomic.
   while (xchg(&lk->locked, 1) != 0)
     ;
@@ -32,6 +34,8 @@ void acquire(struct spinlock *lk) {
   // past this point, to ensure that the critical section's memory
   // references happen after the lock is acquired.
   __sync_synchronize();
+
+  // stop recording
 
   // Record info about lock acquisition for debugging.
   lk->cpu = mycpu();
