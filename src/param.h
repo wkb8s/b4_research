@@ -1,4 +1,4 @@
-#define NPROC 100
+#define NPROC 15000
 #define KSTACKSIZE 4096
 #define NCPU 7
 #define NOFILE 16
@@ -13,3 +13,4 @@
 #define FSSIZE 1000
 #define LOG_SIZE 500
 #define PARENT_PID 3 + 1 // why pid increments when executing taskset?
+#define RQ_SIZE 100

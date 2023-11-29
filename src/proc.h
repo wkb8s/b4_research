@@ -39,8 +39,6 @@ enum procstate {
   RUNNABLE,
   RUNNING,
   ZOMBIE,
-  ACQUIRED,
-  RELEASED
 };
 
 // Per-process state
@@ -65,35 +63,3 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
-
-struct clock {
-  unsigned int hi;
-  unsigned int lo;
-};
-
-enum events {
-  ALLOCPROC,
-  WAKEUP,
-  YIELD,
-  FORK,
-  TICK,
-  EXIT,
-  WAIT,
-  SLEEP,
-  PTABLE_LOCK,
-  RUNQUEUE_LOCK
-};
-
-struct schedlog {
-  struct clock clock;
-  int pid;
-  char name[16];
-  int event_name;
-  int prev_pstate;
-  int next_pstate;
-  int cpu;
-};
-
-extern int finished_fork;
-extern struct schedlog buf_log[LOG_SIZE];
-extern struct clock clock_log[NPROC][3];

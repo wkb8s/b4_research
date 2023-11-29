@@ -10,6 +10,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 struct runqueue;
+struct clock;
 
 // bio.c
 void binit(void);
@@ -121,7 +122,7 @@ void userinit(void);
 int wait(void);
 void wakeup(void*);
 void yield(void);
-void runqueueinit(void);
+void rqinit(void);
 void writelog(int pid, char event_name, int prev_pstate, int next_pstate);
 
 // swtch.S

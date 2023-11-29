@@ -5,22 +5,14 @@
 #include "mmu.h"
 #include "x86.h"
 #include "proc.h"
+#include "myproc.h"
 #include "spinlock.h"
 #include "flags.h"
 
-#define RQ_SIZE 100
-
-int nextpid            = 1;
-int finished_fork      = 0;
-int context_switch_num = 0;
-int steal_num          = 0;
-struct schedlog buf_log[LOG_SIZE];
-struct clock clock_log[NPROC][3];
-
 struct {
   struct spinlock lock;
-  int value[NPROC];
-} is_first_running;
+  struct proc proc[NPROC];
+} ptable;
 
 struct {
   struct spinlock lock;
@@ -29,24 +21,31 @@ struct {
 
 struct {
   struct spinlock lock;
-  struct proc proc[NPROC];
-} ptable;
+  int value[NPROC];
+} is_first_running;
 
 struct runqueue {
   int size;
   int index_head;
   int index_tail;
-  struct proc *content[RQ_SIZE];
   struct spinlock lock;
+  struct proc *content[RQ_SIZE]; // ring-buffer
 };
 
+int nextpid            = 1;
+int steal_num          = 0;
+int finished_fork      = 0;
+int context_switch_num = 0;
 struct runqueue runqueue[NCPU];
+struct clock clock_log[NPROC][3];
+struct schedlog buf_log[LOG_SIZE];
 static struct proc *initproc;
 
 extern void forkret(void);
 extern void trapret(void);
 static void wakeup1(void *chan);
 
+// record clock
 inline struct clock rdtsc(void) {
   unsigned int lo, hi;
   struct clock c;
@@ -102,7 +101,7 @@ int mycpuid(void) {
   return curcpuid;
 }
 
-void runqueueinit(void) {
+void rqinit(void) {
   // init runqueue
   for (int i = 0; i < ncpu; i++) {
     struct runqueue *rq = &runqueue[i];
@@ -490,10 +489,10 @@ void scheduler(void) {
   // Multiple runqueue scheduler
   while (IS_MULTIPLE_RUNQUEUE) {
     // Enable interrupts on this processor.
-    // is it cause??
     sti();
 
-    // current runqueue is empty
+    // when current runqueue is empty,
+    // steal process
     // no need cur_rq->lock
     acquire(&cur_rq->lock);
     if (cur_rq->size == 0) {
@@ -608,12 +607,6 @@ void yield(void) {
 void forkret(void) {
   static int first = 1;
   // Still holding ptable.lock from scheduler.
-
-  /* if (!IS_MULTIPLE_RUNQUEUE) { */
-  /*   release(&ptable.lock); */
-  /* } */
-
-  // here
   release(&ptable.lock);
 
   if (first) {
