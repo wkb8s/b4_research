@@ -25,14 +25,15 @@ WORKLOAD=${WORKLOADS[2]}
 # execute and record
 for POLICY in "${POLICIES[@]}" ; do
 	for NPROC in "${NPROCS[@]}" ; do
-		# for ((i=1; i<=$REPEAT_NUM; i++)); do
-		  ./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM
-		# done
+		for ((i=1; i<=$REPEAT_NUM; i++)); do
+		  ./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM $i
+		done
+		python3 scripts/summarize.py $WORKLOAD $POLICY $NCPU $NPROC $FORK_NUM $LOGSIZE $REPEAT_NUM
 	done
 done
 
 # draw graph
 # (need to prepare all logs)
-python3 scripts/plot.py $WORKLOAD $NCPU $LOGSIZE $FORK_NUM
+python3 scripts/plot.py $WORKLOAD $NCPU $LOGSIZE $FORK_NUM $REPEAT_NUM
 
 exit 0

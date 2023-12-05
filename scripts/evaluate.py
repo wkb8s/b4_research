@@ -1,11 +1,18 @@
 import pandas as pd
 import numpy as np
+import os
 import sys
 import yaml
 import math
 import shutil
 import subprocess
 from datetime import datetime
+
+# get args
+args = sys.argv
+if (len(args) != 2):
+    print("usage: python3 scripts/evaluate.py REPEAT_INDEX")
+repeat_index = args[1]
 
 # NPROC must be < 100
 NCPU = NPROC = PROC_MAX = LOGSIZE = 0
@@ -82,7 +89,7 @@ for line in df.itertuples(name=None, index=False):
 summary = {}
 output_name = "log/" + workload + "/" + policy \
     + "_cpu" + str(NCPU) + "_nproc" + str(PROC_MAX) + "_fork" \
-    + str(FORK_NUM) + "_logsize" + str(LOGSIZE)
+    + str(FORK_NUM) + "_logsize" + str(LOGSIZE) + "/"
 
 env = {}
 env["policy"] = policy
@@ -245,6 +252,7 @@ cpuusage["std/ave"] = std_cpu / ave_cpu * 100
 summary["cpu_usage"] = cpuusage
 
 # save data
-shutil.copyfile(input_path, output_name + ".csv")
-with open(output_name + ".yaml", 'w') as file:
+os.makedirs(os.path.dirname(output_name), exist_ok=True)
+shutil.copyfile(input_path, output_name + repeat_index + ".csv")
+with open(output_name + repeat_index + ".yaml", 'w') as file:
     yaml.dump(summary, file)

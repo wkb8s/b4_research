@@ -1,0 +1,25 @@
+balancing:
+  average: 0.5861112515780944
+  size: 10
+  std: 0.09982125712335388
+  std/ave: 17.031110877770537
+counters:
+  average: 37200.6
+  size: 10
+  std: 159.99944444347994
+  std/ave: 0.4300990963680154
+cpu_usage:
+  average: 18.181295355839595
+  size: 10
+  std: 1.5802765858103889
+  std/ave: 8.691771157564
+runtime:
+  average: 1.760083593285755
+  size: 10
+  std: 0.5985797724451286
+  std/ave: 34.00859906475745
+time_turnaround:
+  average: 1161198643.1058824
+  size: 10
+  std: 5464861.154092101
+  std/ave: 0.47062241990527326
