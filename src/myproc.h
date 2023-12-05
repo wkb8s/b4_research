@@ -27,6 +27,15 @@ struct schedlog {
   char name[16]; // for debugging
 };
 
+/* struct lock_time_log { */
+/*   int is_start; */
+/*   struct clock clock[300]; */
+/*   char *name; */
+/* }; */
+
 extern int finished_fork;
 extern struct schedlog buf_log[LOG_SIZE];
 extern struct clock clock_log[NPROC][3];
+/* extern struct lock_time_log lock_time_log; */
+
+extern int wakeupcnt;

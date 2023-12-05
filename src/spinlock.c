@@ -7,7 +7,11 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "myproc.h"
 #include "spinlock.h"
+#include "flags.h"
+
+/* struct lock_time_log lock_time_log; */
 
 void initlock(struct spinlock *lk, char *name) {
   lk->name   = name;
@@ -15,16 +19,51 @@ void initlock(struct spinlock *lk, char *name) {
   lk->cpu    = 0;
 }
 
+/* inline struct clock rdtsc2(void) { */
+/*   unsigned int lo, hi; */
+/*   struct clock c; */
+/*   __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi)); */
+/*   c.hi = hi; */
+/*   c.lo = lo; */
+/*   return c; */
+/* } */
+
+/* char *safestrcpy2(char *s, const char *t, int n) { */
+/*   char *os; */
+
+/*   os = s; */
+/*   if (n <= 0) */
+/*     return os; */
+/*   while (--n > 0 && (*s++ = *t++) != 0) */
+/*     ; */
+/*   *s = 0; */
+/*   return os; */
+/* } */
+
+/* int index = 0; */
+/* void record_waiting_clock(struct spinlock *lk, int is_start) { */
+/*   if (index++ == 300) */
+/*     return; */
+
+/*   lock_time_log.is_start     = is_start; */
+/*   lock_time_log.clock[index] = rdtsc2(); */
+/*   safestrcpy2(lock_time_log.name, lk->name, sizeof(lock_time_log.name)); */
+/* } */
+
 // Acquire the lock.
 // Loops (spins) until the lock is acquired.
 // Holding a lock for a long time may cause
 // other CPUs to waste time spinning to acquire it.
 void acquire(struct spinlock *lk) {
   pushcli(); // disable interrupts to avoid deadlock.
-  if (holding(lk))
-    panic("acquire");
 
-  // start recording
+  // has large overhead
+  if (IS_DEBUG) {
+    if (holding(lk)) {
+      cprintf("panic acquire, lockname:%s\n", lk->name);
+      panic("acquire");
+    }
+  }
 
   // The xchg is atomic.
   while (xchg(&lk->locked, 1) != 0)
@@ -35,17 +74,22 @@ void acquire(struct spinlock *lk) {
   // references happen after the lock is acquired.
   __sync_synchronize();
 
-  // stop recording
-
   // Record info about lock acquisition for debugging.
-  lk->cpu = mycpu();
-  getcallerpcs(&lk, lk->pcs);
+  if (IS_DEBUG) {
+    lk->cpu = mycpu();
+    getcallerpcs(&lk, lk->pcs);
+  }
 }
 
 // Release the lock.
 void release(struct spinlock *lk) {
-  if (!holding(lk))
-    panic("release");
+  // has large overhead
+  if (IS_DEBUG) {
+    if (!holding(lk)) {
+      cprintf("panic release, lockname:%s\n", lk->name);
+      panic("release");
+    }
+  }
 
   lk->pcs[0] = 0;
   lk->cpu    = 0;

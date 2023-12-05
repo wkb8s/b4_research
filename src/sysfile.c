@@ -498,6 +498,7 @@ int sys_bufread(void) {
   // counter
   cprintf("cnt_contextswitch,%d\n", context_switch_num);
   cprintf("cnt_worksteal,%d\n", steal_num);
+  cprintf("wakeupcnt,%d\n", wakeupcnt);
 
   cprintf("\n");
   return 0;

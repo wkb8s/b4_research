@@ -14,18 +14,12 @@
 プロセス状態について収集したログを元にスケジューラの問題点の発見から公平性の改善を行うまでの一連の流れを示す.
 
 ## Implementation
-以下に示すような Kernel の拡張を行った
-
 ### Scheduler
-- Multiple runrueue に対応した scheduler の追加
-+ Work Stealing の実装
+- 各コアごとに独立したスケジューラが動作するように改良
+- Work Stealing の実装
 
 ### Logging
-測定用に, 2つ system callを追加
-- bufwrite
-bufwrite.c を実行し, ログをバッファに自動的に記録する
-- bufread
-bufwrite system call で記録されたログを print する
+測定用に, ログをバッファに記録し出力するための 2 つのシステムコールを追加
 
 ### Workloads
 測定時に実行するワークロードも実装
@@ -35,19 +29,8 @@ bufwrite system call で記録されたログを print する
 - xv6 の fairness を崩すようなタスク
 など
 
-## Discussion
-### CPU-intensive なタスクについて
-- プロセスの個数が 1 〜 2 のときは, CPU 2, 3 が特に使われていない
-- プロセス数 4 のとき, CPU が一切入れ替わることなかった (理由は調査中)
-- プロセス数 5 以上の時は動作に致命的な問題点は見られなかった
+### VCPU pinning
+各 VCPU が PCPU を専有することを保証するためのスクリプトを実装
 
-### I/O-intensive なタスクについて
-- CPU-intensive なタスクとは異なりI/O を発行しているので, 各コアで常にプロセスが RUNNING で動いていることは起きず, 細切りのグラフ形状になった
-- pid 3 は I/O 処理を行わないにも関わらず RUNNING 状態が長く続いていることが読み取れるが, これは fork を自分一人で全て行っているためであると考えられる
-- SLEEPING から復帰した際にも, 前と同じコアで処理が継続するケースが多く見られた
-+ CPU-intensive の処理の場合にはこのような現象は見られなかった.
-
-### CPU-intensive, I/O-intensive なタスクを同時に実行した際の挙動
-- コアを跨ぐことはあるものの, CPU-intensive なタスクは RUNNING が途切れることはない
-- 一方, I/O-intensive なタスクは細切れで実行された
-- 両者が同時に実行されることでスケジューリングに不具合が発生することはなく, 想定通りの挙動となった
+### Visualize
+測定データ分析用のスクリプトを実装

@@ -122,7 +122,7 @@ void userinit(void);
 int wait(void);
 void wakeup(void*);
 void yield(void);
-void rqinit(void);
+void myinit(void);
 void writelog(int pid, char event_name, int prev_pstate, int next_pstate);
 
 // swtch.S

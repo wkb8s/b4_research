@@ -1,5 +1,4 @@
-#!/bin/bash
-set u
+#!/bin/bash -eu
 
 NPROCS=(
 	"15000"
@@ -12,20 +11,23 @@ WORKLOADS=(
 	"IS_YIELD_REPEAT"
 )
 POLICIES=(
-	"IS_ROUNDROBIN"
 	"IS_MULTIPLE_RUNQUEUE"
+	"IS_ROUNDROBIN"
 )
 
 NCPU=7
+LOGSIZE=500
 FORK_NUM=32
 CALC_NUM=32
-LOGSIZE=500
-WORKLOAD=${WORKLOADS[1]}
+REPEAT_NUM=10
+WORKLOAD=${WORKLOADS[2]}
 
 # execute and record
 for POLICY in "${POLICIES[@]}" ; do
 	for NPROC in "${NPROCS[@]}" ; do
-		./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM
+		# for ((i=1; i<=$REPEAT_NUM; i++)); do
+		  ./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM
+		# done
 	done
 done
 

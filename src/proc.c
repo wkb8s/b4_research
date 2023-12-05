@@ -15,13 +15,13 @@ struct {
 } ptable;
 
 struct {
-  struct spinlock lock;
   int value;
+  struct spinlock lock;
 } bufsize;
 
 struct {
-  struct spinlock lock;
   int value[NPROC];
+  struct spinlock lock;
 } is_first_running;
 
 struct runqueue {
@@ -33,10 +33,13 @@ struct runqueue {
 };
 
 int nextpid            = 1;
+int wakeupcnt          = 0;
 int steal_num          = 0;
 int finished_fork      = 0;
 int context_switch_num = 0;
+
 struct runqueue runqueue[NCPU];
+struct runqueue sleepqueue[NCPU];
 struct clock clock_log[NPROC][3];
 struct schedlog buf_log[LOG_SIZE];
 static struct proc *initproc;
@@ -44,6 +47,7 @@ static struct proc *initproc;
 extern void forkret(void);
 extern void trapret(void);
 static void wakeup1(void *chan);
+static void wakeup2(void *chan);
 
 // record clock
 inline struct clock rdtsc(void) {
@@ -101,9 +105,14 @@ int mycpuid(void) {
   return curcpuid;
 }
 
-void rqinit(void) {
+void myinit(void) {
+  for (int i = 0; i < NPROC; i++)
+    is_first_running.value[i] = 1;
+
+  bufsize.value = 0;
+
   // init runqueue
-  for (int i = 0; i < ncpu; i++) {
+  for (int i = 0; i < NCPU; i++) {
     struct runqueue *rq = &runqueue[i];
     rq->size            = 0;
     rq->index_head      = 0;
@@ -113,22 +122,70 @@ void rqinit(void) {
       rq->content[j] = NULL;
   }
 
-  for (int i = 0; i < NPROC; i++)
-    is_first_running.value[i] = 1;
+  // init sleepqueue
+  for (int i = 0; i < NCPU; i++) {
+    struct runqueue *slpq = &sleepqueue[i];
+    slpq->size            = 0;
+    slpq->index_head      = 0;
+    slpq->index_tail      = 0;
+    initlock(&slpq->lock, "sleepqueue");
+    for (int j = 0; j < RQ_SIZE; j++)
+      slpq->content[j] = NULL;
+  }
+}
 
-  bufsize.value = 0;
+// for debugging
+void printrq(void) {
+  cprintf("runqueue\n");
+  for (int i = 0; i < ncpu; i++) {
+    struct runqueue *rq = &runqueue[i];
+    cprintf("rq %d: ", i);
+    for (int j = 0; j < RQ_SIZE; j++) {
+      if (rq->content[j] != NULL)
+        cprintf("%d, ", rq->content[j]->pid);
+    }
+    cprintf("\n");
+  }
+
+  cprintf("sleepqueue\n");
+  for (int i = 0; i < ncpu; i++) {
+    struct runqueue *slpq = &sleepqueue[i];
+    cprintf("rq %d: ", i);
+    for (int j = 0; j < RQ_SIZE; j++) {
+      if (slpq->content[j] != NULL)
+        cprintf("%d, ", slpq->content[j]->pid);
+    }
+    cprintf("\n");
+  }
 }
 
 // Must be called with rq->lock
 struct proc *dequeue(struct runqueue *rq) {
   struct proc *head = rq->content[rq->index_head];
 
-  if (!holding(&rq->lock))
-    panic("dequeue : no lock");
+  if (IS_DEBUG) {
+    if (!holding(&rq->lock))
+      panic("dequeue : no lock");
+  }
+  if (!IS_MULTIPLE_RUNQUEUE)
+    panic("dequeue : invalid policy");
   if (rq->size-- < 1)
     panic("dequeue : empty runqueue");
-  if (head == NULL)
+  if (head == NULL) {
+    cprintf("name %s\n", rq->lock.name);
     panic("dequeue : no proc");
+  }
+  /* if (head->state != RUNNABLE && head->state != SLEEPING) { */
+  /*   cprintf("dequeue : p->state is %d\n", head->state); */
+  /*   panic("dequeue : invalid proc state"); */
+  /* } */
+  /* for (int i = 0; i < ncpu; i++) { */
+  /*   struct runqueue *rq = &runqueue[i]; */
+  /*   if (rq->size != 0) */
+  /*     break; */
+  /*   if (i == ncpu - 1) */
+  /*     cprintf("dequeue : all rq became vacant\n"); */
+  /* } */
 
   rq->content[rq->index_head] = NULL;
   rq->index_head              = (rq->index_head + 1) % RQ_SIZE;
@@ -137,12 +194,20 @@ struct proc *dequeue(struct runqueue *rq) {
 
 // Must be called with rq->lock
 void enqueue(struct runqueue *rq, struct proc *p) {
-  if (!holding(&rq->lock))
-    panic("enqueue : no lock");
+  if (IS_DEBUG) {
+    if (!holding(&rq->lock))
+      panic("enqueue : no lock");
+  }
+  if (!IS_MULTIPLE_RUNQUEUE)
+    panic("enqueue : invalid policy");
   if (rq->size++ > RQ_SIZE)
     panic("enqueue : full runqueue");
   if (rq->content[rq->index_tail] != NULL)
     panic("enqueue : already exist");
+  /* if (p->state != RUNNABLE && p->state != SLEEPING) { */
+  /*   cprintf("enqueue : p->state is %d\n", p->state); */
+  /*   panic("enqueue : invalid proc state"); */
+  /* } */
 
   rq->content[rq->index_tail] = p;
   rq->index_tail              = (rq->index_tail + 1) % RQ_SIZE;
@@ -158,6 +223,8 @@ void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
   if (IS_LARGEWRITE && (pid != PARENT_PID))
     return;
 
+  if (bufsize.value >= LOG_SIZE)
+    return;
   acquire(&bufsize.lock);
   if (bufsize.value >= LOG_SIZE) {
     release(&bufsize.lock);
@@ -193,10 +260,10 @@ static struct proc *allocproc(void) {
   return 0;
 
 found:
-  p->pid   = nextpid++;
   p->state = EMBRYO;
-
+  p->pid   = nextpid++;
   release(&ptable.lock);
+
   writelog(p->pid, ALLOCPROC, UNUSED, EMBRYO);
 
   // Allocate kernel stack.
@@ -231,6 +298,8 @@ void userinit(void) {
 
   p = allocproc();
 
+  // why ptable.lock is unnecessary???
+
   initproc = p;
   if ((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -256,9 +325,13 @@ void userinit(void) {
   p->state = RUNNABLE;
   release(&ptable.lock);
 
+  if (!IS_MULTIPLE_RUNQUEUE)
+    return;
+
+  // don't forget to enqueue initproc!
   struct runqueue *cur_rq = &runqueue[mycpuid()];
   acquire(&cur_rq->lock);
-  enqueue(cur_rq, p); // don't forget to push initproc!
+  enqueue(cur_rq, p);
   release(&cur_rq->lock);
 }
 
@@ -319,31 +392,33 @@ int fork(void) {
 
   pid = np->pid;
 
-  // enqueue
-  if (IS_MULTIPLE_RUNQUEUE) {
-    // seek small runqueue
-    // !: not always ensured
-    struct runqueue *target = NULL;
-    int min_rqsize          = NPROC;
-    for (int i = 0; i < ncpu; i++) {
-      struct runqueue *rq = &runqueue[i];
-      if (rq->size < min_rqsize) {
-        target     = rq;
-        min_rqsize = rq->size;
-      }
-    }
-    if (target == NULL)
-      panic("target not exist");
-
-    acquire(&target->lock);
-    enqueue(target, np);
-    release(&target->lock);
-  }
-
   writelog(np->pid, FORK, np->state, RUNNABLE);
   acquire(&ptable.lock);
   np->state = RUNNABLE;
   release(&ptable.lock);
+
+  if (IS_ROUNDROBIN)
+    return pid;
+
+  // seek smallest runqueue
+  // but, best effort
+  struct runqueue *target = NULL;
+  int min_rqsize          = NPROC + 1;
+
+  for (int i = 0; i < NCPU; i++) {
+    struct runqueue *rq = &runqueue[i];
+    if (rq->size < min_rqsize) {
+      target     = rq;
+      min_rqsize = rq->size;
+    }
+  }
+
+  if (target == NULL || min_rqsize == NPROC + 1)
+    panic("fork: enqueue failed");
+
+  acquire(&target->lock);
+  enqueue(target, np);
+  release(&target->lock);
 
   return pid;
 }
@@ -372,23 +447,46 @@ void exit(void) {
   end_op();
   curproc->cwd = 0;
 
-  acquire(&ptable.lock);
+  /* cprintf("exit called\n"); */
 
-  // Parent might be sleeping in wait().
-  wakeup1(curproc->parent);
+  writelog(curproc->pid, EXIT, RUNNING, ZOMBIE);
 
-  // Pass abandoned children to init.
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    if (p->parent == curproc) {
-      p->parent = initproc;
-      if (p->state == ZOMBIE)
-        wakeup1(initproc);
+  // for default
+  if (IS_ROUNDROBIN) {
+    acquire(&ptable.lock);
+    // Parent might be sleeping in wait().
+    wakeup1(curproc->parent);
+    // Pass abandoned children to init.
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      // 'p' is child of curproc
+      if (p->parent == curproc) {
+        p->parent = initproc;
+        // wakeup initproc to clean up 'p'
+        if (p->state == ZOMBIE)
+          wakeup1(initproc);
+      }
     }
+    clock_log[curproc->pid][2] = rdtsc();
   }
 
-  clock_log[curproc->pid][2] = rdtsc();
+  // for multiple
+  else if (IS_MULTIPLE_RUNQUEUE) {
+    wakeup2(curproc->parent);
 
-  writelog(curproc->pid, EXIT, curproc->state, ZOMBIE);
+    // repeating acquire() has large overhead
+    acquire(&ptable.lock);
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->parent != curproc)
+        continue;
+
+      if (p->parent == curproc) {
+        p->parent = initproc;
+        if (p->state == ZOMBIE)
+          wakeup2(initproc);
+      }
+    }
+    clock_log[curproc->pid][2] = rdtsc();
+  }
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
@@ -440,6 +538,7 @@ int wait(void) {
   }
 }
 
+// has something wrong
 struct proc *worksteal(struct runqueue *cur_rq) {
   struct runqueue *target = NULL;
   int maxsize             = 0;
@@ -464,6 +563,21 @@ struct proc *worksteal(struct runqueue *cur_rq) {
   acquire(&target->lock);
   if (target->size > 0) {
     struct proc *ret = dequeue(target);
+
+    if (ret->state != RUNNABLE)
+      panic("worksteal: invalid proc state");
+    if (ret == NULL)
+      panic("worksteal: ret is NULL");
+
+    /* for (int i = 0; i < ncpu; i++) { */
+    /*   struct cpu *c = &cpus[i]; */
+    /*   if (c->proc == ret) { */
+    /*     cprintf("cpu[%d], pid %d, ret->state %d\n", i, ret->pid, ret->state);
+     */
+    /*     panic("worksteal: invalid cpu state"); */
+    /*   } */
+    /* } */
+
     release(&target->lock);
     steal_num++;
     return ret;
@@ -486,10 +600,20 @@ void scheduler(void) {
   struct runqueue *cur_rq = &runqueue[c - cpus];
   c->proc                 = 0;
 
+  /* cprintf("start scheduler %d\n", c - cpus); */
+  /* int x = 0; */
+
   // Multiple runqueue scheduler
   while (IS_MULTIPLE_RUNQUEUE) {
+    /* x = (x + 1) % 1000000; */
+    /* if (x == 500) */
+    /*   cprintf("duler() called\n"); */
+
     // Enable interrupts on this processor.
     sti();
+
+    if (cur_rq->size == 0)
+      continue;
 
     // when current runqueue is empty,
     // steal process
@@ -497,30 +621,31 @@ void scheduler(void) {
     acquire(&cur_rq->lock);
     if (cur_rq->size == 0) {
       release(&cur_rq->lock);
-      if ((p = worksteal(cur_rq)) == NULL)
-        continue;
-    } else {
-      p = dequeue(cur_rq);
-      release(&cur_rq->lock);
+      /* if ((p = worksteal(cur_rq)) == NULL) */
+      continue;
+      /* cprintf("stole!\n"); */
     }
-
+    p = dequeue(cur_rq);
+    release(&cur_rq->lock);
     c->proc = p;
     switchuvm(p);
 
-    acquire(&is_first_running.lock);
     if (is_first_running.value[p->pid]) {
-      clock_log[p->pid][1]           = rdtsc();
-      is_first_running.value[p->pid] = 0;
+      acquire(&is_first_running.lock);
+      if (is_first_running.value[p->pid]) {
+        clock_log[p->pid][1]           = rdtsc();
+        is_first_running.value[p->pid] = 0;
+      }
+      release(&is_first_running.lock);
     }
-    release(&is_first_running.lock);
 
+    context_switch_num++;
     acquire(&ptable.lock);
     p->state = RUNNING;
-    context_switch_num++;
     swtch(&(c->scheduler), p->context);
-    c->proc = 0;
     release(&ptable.lock);
     switchkvm();
+    c->proc = 0;
   }
 
   // default round robin scheduler
@@ -530,23 +655,26 @@ void scheduler(void) {
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-      if (p->state == RUNNABLE) {
-        c->proc = p;
-        switchuvm(p);
+      if (p->state != RUNNABLE)
+        continue;
 
+      c->proc = p;
+      switchuvm(p);
+
+      if (is_first_running.value[p->pid]) {
         acquire(&is_first_running.lock);
         if (is_first_running.value[p->pid]) {
           clock_log[p->pid][1]           = rdtsc();
           is_first_running.value[p->pid] = 0;
         }
         release(&is_first_running.lock);
-
-        p->state = RUNNING;
-        context_switch_num++;
-        swtch(&(c->scheduler), p->context);
-        switchkvm();
-        c->proc = 0; // no process is executed in current CPU
       }
+
+      p->state = RUNNING;
+      context_switch_num++;
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
+      c->proc = 0; // no process is executed in current CPU
     }
     release(&ptable.lock);
   }
@@ -563,8 +691,10 @@ void sched(void) {
   int intena;
   struct proc *p = myproc();
 
-  if (!holding(&ptable.lock))
-    panic("sched ptable.lock");
+  if (IS_DEBUG) {
+    if (!holding(&ptable.lock))
+      panic("sched ptable.lock");
+  }
   if (mycpu()->ncli != 1)
     panic("sched locks");
   if (p->state == RUNNING)
@@ -572,7 +702,6 @@ void sched(void) {
   if (readeflags() & FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
-
   context_switch_num++;
   swtch(&p->context, mycpu()->scheduler);
   mycpu()->intena = intena;
@@ -583,23 +712,31 @@ void yield(void) {
   struct proc *curproc    = myproc();
   struct runqueue *cur_rq = &runqueue[mycpuid()];
 
-  writelog(curproc->pid, YIELD, curproc->state, RUNNABLE);
-  acquire(&ptable.lock); // DOC: yieldlock
+  writelog(curproc->pid, YIELD, RUNNING, RUNNABLE);
+  acquire(&ptable.lock);
+  curproc->state = RUNNABLE;
 
   if (IS_MULTIPLE_RUNQUEUE) {
+    /* for (int i = 0; i < ncpu; i++) { */
+    /*   struct cpu *c = &cpus[i]; */
+    /*   if (c->proc == curproc) { */
+    /*     cprintf("cpu[%d], pid %d, ret->state %d\n", i, curproc->pid, */
+    /*             curproc->state); */
+    /*     panic("yield: invalid cpu state"); */
+    /*   } */
+    /* } */
+    // acquire/release has overhead
+    /* release(&ptable.lock); */
     acquire(&cur_rq->lock);
     enqueue(cur_rq, curproc);
     release(&cur_rq->lock);
+    /* acquire(&ptable.lock); */
   }
 
-  curproc->state = RUNNABLE;
   sched();
-
-  // increase turnaround time if placed after release()
+  release(&ptable.lock);
   curproc = myproc();
   writelog(curproc->pid, TICK, RUNNABLE, RUNNING);
-
-  release(&ptable.lock);
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -624,7 +761,8 @@ void forkret(void) {
 // Atomically release lock and sleep on chan.
 // Reacquires lock when awakened.
 void sleep(void *chan, struct spinlock *lk) {
-  struct proc *p = myproc();
+  struct proc *p            = myproc();
+  struct runqueue *cur_slpq = &sleepqueue[mycpuid()];
 
   if (p == 0)
     panic("sleep");
@@ -633,6 +771,10 @@ void sleep(void *chan, struct spinlock *lk) {
     panic("sleep without lk");
 
   writelog(p->pid, SLEEP, p->state, SLEEPING);
+
+  // is it okay to place here?
+  if (IS_MULTIPLE_RUNQUEUE)
+    enqueue(cur_slpq, p);
 
   // Must acquire ptable.lock in order to
   // change p->state and then call sched.
@@ -644,14 +786,12 @@ void sleep(void *chan, struct spinlock *lk) {
     acquire(&ptable.lock);  // DOC: sleeplock1
     release(lk);
   }
+
   // Go to sleep.
   p->chan  = chan;
   p->state = SLEEPING;
-  sched();
 
-  // increase turnaround time if placed after release() ??
-  struct proc *curproc = myproc();
-  writelog(curproc->pid, TICK, RUNNABLE, RUNNING);
+  sched();
 
   // Tidy up.
   p->chan = 0;
@@ -661,6 +801,8 @@ void sleep(void *chan, struct spinlock *lk) {
     release(&ptable.lock);
     acquire(lk);
   }
+
+  writelog(myproc()->pid, TICK, RUNNABLE, RUNNING);
 }
 
 // PAGEBREAK!
@@ -668,24 +810,58 @@ void sleep(void *chan, struct spinlock *lk) {
 //  The ptable lock must be held.
 static void wakeup1(void *chan) {
   struct proc *p;
-  struct runqueue *cur_rq = &runqueue[mycpuid()];
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == SLEEPING && p->chan == chan) {
       writelog(p->pid, WAKEUP, p->state, RUNNABLE);
       p->state = RUNNABLE;
-      if (IS_MULTIPLE_RUNQUEUE) {
-        acquire(&cur_rq->lock);
-        enqueue(cur_rq, p);
-        release(&cur_rq->lock);
-      }
+      wakeupcnt++;
     }
 }
 
-// Wake up all processes sleeping on chan.
+// for multiple runqueue
+// ptable.lock free
+static void wakeup2(void *chan) {
+  struct proc *p;
+
+  for (int j = 0; j < NCPU; j++) {
+    struct runqueue *cur_rq   = &runqueue[j];
+    struct runqueue *cur_slpq = &sleepqueue[j];
+
+    for (int i = 0; i < RQ_SIZE; i++) {
+      if (cur_slpq->size == 0)
+        break;
+
+      p = dequeue(cur_slpq);
+      /* if (p->chan != chan) { */
+      /*   enqueue(cur_slpq, p); */
+      /*   continue; */
+      /* } */
+
+      writelog(p->pid, WAKEUP, p->state, RUNNABLE);
+
+      acquire(&ptable.lock);
+      p->state = RUNNABLE;
+      release(&ptable.lock);
+
+      acquire(&cur_rq->lock);
+      enqueue(cur_rq, p);
+      release(&cur_rq->lock);
+
+      wakeupcnt++;
+    }
+  }
+}
+
 void wakeup(void *chan) {
-  if (holding(&ptable.lock)) {
-    panic("wakeup: already locked!\n");
+  if (IS_DEBUG) {
+    if (holding(&ptable.lock))
+      panic("wakeup: already locked!\n");
+  }
+
+  if (IS_MULTIPLE_RUNQUEUE) {
+    wakeup2(chan);
+    return;
   }
 
   acquire(&ptable.lock);
