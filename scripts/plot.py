@@ -15,20 +15,16 @@ logsize = args[3]
 forknum = args[4]
 repeatnum = args[5]
 
-if (workload == "IS_YIELD_REPEAT"):
-    workload = "yieldrepeat"
-elif (workload == "IS_CALCULATION"):
-    workload = "calculation"
-elif (workload == "IS_LARGEWRITE"):
-    workload = "largewrite"
+if (workload == "largewrite"):
     forknum = ''
 
 x1 = [1, 2, 3]
 x2 = [1.3, 2.3, 3.3]
 
-category = ["time_turnaround", "cpu_usage", "runtime", "balancing", "counters"]
+category = ["time_turnaround", "cpu_usage", "runtime", "balancing", "counters", "time_response"]
 # index = ["average", "average", "standard", "standard", "contextswitch"]
-ytitle = ["turnaround time [clock]", "cpu usage [%]", "std of cpu time per cpu", "std of cpu occupancy per process", "number of context switch"]
+ytitle = ["turnaround time [clock]", "cpu usage [%]", "std of cpu time per cpu", \
+          "std of cpu occupancy per process", "number of context switch", "response time [clock]"]
 
 for i in range(len(category)):
     y = {}

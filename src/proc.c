@@ -19,17 +19,12 @@ struct {
   struct spinlock lock;
 } bufsize;
 
-struct {
-  int value[NPROC];
-  struct spinlock lock;
-} is_first_running;
-
 struct runqueue {
   int size;
   int index_head;
   int index_tail;
   struct spinlock lock;
-  struct proc *content[RQ_SIZE]; // ring-buffer
+  struct proc *content[RQ_SIZE];
 };
 
 int nextpid            = 1;
@@ -37,6 +32,7 @@ int wakeupcnt          = 0;
 int steal_num          = 0;
 int finished_fork      = 0;
 int context_switch_num = 0;
+int is_first_running[NPROC];
 
 struct runqueue runqueue[NCPU];
 struct runqueue sleepqueue[NCPU];
@@ -107,7 +103,7 @@ int mycpuid(void) {
 
 void myinit(void) {
   for (int i = 0; i < NPROC; i++)
-    is_first_running.value[i] = 1;
+    is_first_running[i] = 1;
 
   bufsize.value = 0;
 
@@ -188,7 +184,7 @@ struct proc *dequeue(struct runqueue *rq) {
   /* } */
 
   rq->content[rq->index_head] = NULL;
-  rq->index_head              = (rq->index_head + 1) % RQ_SIZE;
+  rq->index_head              = (rq->index_head + 1) % RQ_SIZE; // ring-buffer
   return head;
 }
 
@@ -210,7 +206,7 @@ void enqueue(struct runqueue *rq, struct proc *p) {
   /* } */
 
   rq->content[rq->index_tail] = p;
-  rq->index_tail              = (rq->index_tail + 1) % RQ_SIZE;
+  rq->index_tail              = (rq->index_tail + 1) % RQ_SIZE; // ring-buffer
 }
 
 void writelog(int pid, char event_name, int prev_pstate, int next_pstate) {
@@ -630,13 +626,10 @@ void scheduler(void) {
     c->proc = p;
     switchuvm(p);
 
-    if (is_first_running.value[p->pid]) {
-      acquire(&is_first_running.lock);
-      if (is_first_running.value[p->pid]) {
-        clock_log[p->pid][1]           = rdtsc();
-        is_first_running.value[p->pid] = 0;
-      }
-      release(&is_first_running.lock);
+    // no lock needed because written only once
+    if (is_first_running[p->pid]) {
+      clock_log[p->pid][1]     = rdtsc();
+      is_first_running[p->pid] = 0;
     }
 
     context_switch_num++;
@@ -661,13 +654,10 @@ void scheduler(void) {
       c->proc = p;
       switchuvm(p);
 
-      if (is_first_running.value[p->pid]) {
-        acquire(&is_first_running.lock);
-        if (is_first_running.value[p->pid]) {
-          clock_log[p->pid][1]           = rdtsc();
-          is_first_running.value[p->pid] = 0;
-        }
-        release(&is_first_running.lock);
+      // no lock needed because written only once
+      if (is_first_running[p->pid]) {
+        clock_log[p->pid][1]     = rdtsc();
+        is_first_running[p->pid] = 0;
       }
 
       p->state = RUNNING;
@@ -701,6 +691,7 @@ void sched(void) {
     panic("sched running");
   if (readeflags() & FL_IF)
     panic("sched interruptible");
+
   intena = mycpu()->intena;
   context_switch_num++;
   swtch(&p->context, mycpu()->scheduler);

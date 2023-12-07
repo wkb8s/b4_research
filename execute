@@ -6,34 +6,35 @@ NPROCS=(
 	"100"
 )
 WORKLOADS=(
-	"IS_CALCULATION"
-	"IS_LARGEWRITE"
-	"IS_YIELD_REPEAT"
+	"caluculation"
+	"largewrite"
+	"yieldrepeat"
 )
 POLICIES=(
-	"IS_MULTIPLE_RUNQUEUE"
-	"IS_ROUNDROBIN"
+	"multiple"
+	"default"
 )
 
 NCPU=7
 LOGSIZE=500
 FORK_NUM=32
 CALC_NUM=32
-REPEAT_NUM=10
-WORKLOAD=${WORKLOADS[2]}
+REPEAT_NUM=1
+WORKLOAD_INDEX=2
+WORKLOAD=${WORKLOADS[$WORKLOAD_INDEX]}
 
-# execute and record
 for POLICY in "${POLICIES[@]}" ; do
 	for NPROC in "${NPROCS[@]}" ; do
 		for ((i=1; i<=$REPEAT_NUM; i++)); do
-		  ./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM $i
+			# execute and record
+		  ./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM $i $WORKLOAD_INDEX
 		done
+		# summarize repeated logs
 		python3 scripts/summarize.py $WORKLOAD $POLICY $NCPU $NPROC $FORK_NUM $LOGSIZE $REPEAT_NUM
 	done
 done
 
 # draw graph
-# (need to prepare all logs)
 python3 scripts/plot.py $WORKLOAD $NCPU $LOGSIZE $FORK_NUM $REPEAT_NUM
 
 exit 0

@@ -1,25 +1,24 @@
 balancing:
-  average: 0.5861112515780944
-  size: 10
-  std: 0.09982125712335388
-  std/ave: 17.031110877770537
+  average: 0.48950243459401405
+  size: 1
+  std: 0
 counters:
-  average: 37200.6
-  size: 10
-  std: 159.99944444347994
-  std/ave: 0.4300990963680154
+  average: 37235.0
+  size: 1
+  std: 0
 cpu_usage:
-  average: 18.181295355839595
-  size: 10
-  std: 1.5802765858103889
-  std/ave: 8.691771157564
+  average: 15.633245364495064
+  size: 1
+  std: 0
 runtime:
-  average: 1.760083593285755
-  size: 10
-  std: 0.5985797724451286
-  std/ave: 34.00859906475745
+  average: 2.2328503480555244
+  size: 1
+  std: 0
+time_response:
+  average: 6247809.882352941
+  size: 1
+  std: 0
 time_turnaround:
-  average: 1161198643.1058824
-  size: 10
-  std: 5464861.154092101
-  std/ave: 0.47062241990527326
+  average: 1111795669.6470587
+  size: 1
+  std: 0

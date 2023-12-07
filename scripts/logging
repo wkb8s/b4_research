@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [[ $# -lt 8 ]]; then
-  echo "usage: ./scripts/logging NCPU NPROC POLICY LOGSIZE WORKLOAD FORK_NUM CALC_NUM REPEAT_INDEX"
+if [[ $# -lt 9 ]]; then
+  echo "usage: ./scripts/logging NCPU NPROC POLICY LOG_SIZE WORKLOAD FORK_NUM CALC_NUM REPEAT_INDEX WORKLOAD_INDEX"
   exit 1
 fi
 
@@ -13,6 +13,7 @@ WORKLOAD=$5
 FORK_NUM=$6
 CALC_NUM=$7
 REPEAT_INDEX=$8
+WORKLOAD_INDEX=$9
 
 LOG_PATH=log/tmp.log
 MAKEFILE_PATH=src/Makefile
@@ -22,39 +23,30 @@ VCPU_PINNING_TIME=1
 TIMEOUT_SECONDS=$((XV6_BOOT_TIME + VCPU_PINNING_TIME))
 
 # optimize timeout seconds
-if [ $POLICY == "IS_ROUNDROBIN" ]; then
+if [ $POLICY == "default" ]; then
   TIMEOUT_SECONDS=$((TIMEOUT_SECONDS + 3))
 fi
 
-if [ $WORKLOAD != "IS_LARGEWRITE" ]; then
-  TIMEOUT_SECONDS=$((TIMEOUT_SECONDS + 2))
-else
+# caluculation
+if [ $WORKLOAD_INDEX == 0 ]; then
+  TIMEOUT_SECONDS=$((TIMEOUT_SECONDS + 3))
+# largewrite
+elif [ $WORKLOAD_INDEX == 1 ]; then
 	TIMEOUT_SECONDS=$((TIMEOUT_SECONDS + 8))
+# yieldrepeat
+elif [ $WORKLOAD_INDEX == 2 ]; then
+	TIMEOUT_SECONDS=$((TIMEOUT_SECONDS + 2))
 fi
-
-# if [ $LOG_SIZE == "3000" ]; then
-# 		TIMEOUT_SECONDS=$(($TIMEOUT_SECONDS+6))
-
-# 		if [ $POLICY == "IS_MULTIPLE_RUNQUEUE" ]; then
-# 				TIMEOUT_SECONDS=$(($TIMEOUT_SECONDS+15))
-# 		fi
-# fi
 
 # edit Makefile
 sed -i "s/CPUS\ :=\ [0-9]*/CPUS\ :=\ $NCPU/" $MAKEFILE_PATH
 
 # generate header files
-./scripts/generate_param $NPROC $NCPU $LOG_SIZE > src/param.h
-./scripts/generate_flag $POLICY $WORKLOAD $FORK_NUM $CALC_NUM > src/flags.h
+./scripts/generate_header $POLICY $WORKLOAD $FORK_NUM $CALC_NUM $NPROC $NCPU $LOG_SIZE
 
 # run xv6
-if [ $3 != "IS_ROUNDROBIN" ]; then
-  sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
-    | sh -c "cd src && timeout $TIMEOUT_SECONDS make --silent qemu-nox | tee ../$LOG_PATH"
-elif [ $3 != "IS_MULTIPLE_RUNQUEUE" ]; then
-  sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input.txt" \
-    | sh -c "cd src && timeout $TIMEOUT_SECONDS make --silent qemu-nox | tee ../$LOG_PATH"
-fi
+sh -c "sleep $XV6_BOOT_TIME && scripts/vcpupin $NCPU > /dev/null && sleep $VCPU_PINNING_TIME && cat scripts/input" | \
+sh -c "cd src && timeout $TIMEOUT_SECONDS make --silent qemu-nox | tee ../$LOG_PATH"
 
 # delete unnecessary information
 found=false
@@ -67,4 +59,4 @@ while IFS= read -r line; do
 done < "$LOG_PATH"
 
 # save logs
-python3 scripts/evaluate.py $REPEAT_INDEX
+python3 scripts/evaluate.py $NCPU $NPROC $POLICY $LOG_SIZE $WORKLOAD $FORK_NUM $CALC_NUM $REPEAT_INDEX $WORKLOAD_INDEX

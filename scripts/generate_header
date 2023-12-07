@@ -1,0 +1,75 @@
+#!/bin/bash
+
+if [[ $# -lt 7 ]]; then
+  echo "./scripts/generate_header POLICY WORKLOAD FORK_NUM CALC_NUM NPROC NCPU LOG_SIZE"
+  exit 1
+fi
+
+POLICY=$1
+WORKLOAD=$2
+FORK_NUM=$3
+CALC_NUM=$4
+NPROC=$5
+NCPU=$6
+LOG_SIZE=$7
+
+if [ $POLICY == "default" ]; then
+		POLICY="IS_ROUNDROBIN"
+elif [ $POLICY == "multiple" ]; then
+		POLICY="IS_MULTIPLE_RUNQUEUE"
+else
+		echo "invalid policy"
+		exit 1
+fi
+
+if [ $WORKLOAD == "caluculation" ]; then
+		WORKLOAD="IS_CALCULATION"
+elif [ $WORKLOAD == "largewrite" ]; then
+		WORKLOAD="IS_LARGEWRITE"
+elif [ $WORKLOAD == "yieldrepeat" ]; then
+		WORKLOAD="IS_YIELD_REPEAT"
+else
+		echo "invalid workload"
+		exit 1
+fi
+
+# generate flags.h
+# enable only one of options
+# in policy and workload
+cat << EOF | sed -E "s/($POLICY) 0/\1 1/g; s/($WORKLOAD) 0/\1 1/g" > src/flags.h
+#define IS_DEBUG 0
+
+#define IS_MULTIPLE_RUNQUEUE 0
+#define IS_ROUNDROBIN 0
+
+#define IS_YIELD_REPEAT 0
+#define IS_CALCULATION 0
+#define IS_LARGEWRITE 0
+
+#define FORK_NUM $FORK_NUM
+#define CALC_NUM $CALC_NUM
+#define CALC_LOOP 100000000
+
+extern int context_switch_num;
+extern int steal_num;
+EOF
+
+# generate param.h
+cat << EOF > src/param.h
+#define NPROC $NPROC
+#define KSTACKSIZE 4096
+#define NCPU $NCPU
+#define NOFILE 16
+#define NFILE 100
+#define NINODE 50
+#define NDEV 10
+#define ROOTDEV 1
+#define MAXARG 32
+#define MAXOPBLOCKS 10
+#define LOGSIZE (MAXOPBLOCKS * 3)
+#define NBUF (MAXOPBLOCKS * 3)
+#define FSSIZE 1000
+#define LOG_SIZE $LOG_SIZE
+#define PARENT_PID 3 + 1 // why pid increments when executing taskset?
+#define RQ_SIZE 100
+EOF
