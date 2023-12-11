@@ -6,7 +6,7 @@ NPROCS=(
 	"100"
 )
 WORKLOADS=(
-	"caluculation"
+	"calculation"
 	"largewrite"
 	"yieldrepeat"
 )
@@ -16,6 +16,7 @@ POLICIES=(
 )
 
 NCPU=7
+IS_DEBUG=0
 LOGSIZE=500
 FORK_NUM=32
 CALC_NUM=32
@@ -27,10 +28,14 @@ for POLICY in "${POLICIES[@]}" ; do
 	for NPROC in "${NPROCS[@]}" ; do
 		for ((i=1; i<=$REPEAT_NUM; i++)); do
 			# execute and record
-		  ./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM $i $WORKLOAD_INDEX
+		  ./scripts/logging $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM $i $WORKLOAD_INDEX $IS_DEBUG
+		  if [ $i -eq 1 ]; then
+				python3 scripts/cpuplot.py $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM
+				python3 scripts/cumulplot.py $NCPU $NPROC $POLICY $LOGSIZE $WORKLOAD $FORK_NUM $CALC_NUM
+	  	fi
 		done
 		# summarize repeated logs
-		python3 scripts/summarize.py $WORKLOAD $POLICY $NCPU $NPROC $FORK_NUM $LOGSIZE $REPEAT_NUM
+		python3 scripts/summarize.py $WORKLOAD $POLICY $NCPU $NPROC $FORK_NUM $LOGSIZE $REPEAT_NUM $WORKLOAD_INDEX
 	done
 done
 

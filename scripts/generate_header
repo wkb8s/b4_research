@@ -12,6 +12,7 @@ CALC_NUM=$4
 NPROC=$5
 NCPU=$6
 LOG_SIZE=$7
+IS_DEBUG=$8
 
 if [ $POLICY == "default" ]; then
 		POLICY="IS_ROUNDROBIN"
@@ -22,7 +23,7 @@ else
 		exit 1
 fi
 
-if [ $WORKLOAD == "caluculation" ]; then
+if [ $WORKLOAD == "calculation" ]; then
 		WORKLOAD="IS_CALCULATION"
 elif [ $WORKLOAD == "largewrite" ]; then
 		WORKLOAD="IS_LARGEWRITE"
@@ -37,7 +38,8 @@ fi
 # enable only one of options
 # in policy and workload
 cat << EOF | sed -E "s/($POLICY) 0/\1 1/g; s/($WORKLOAD) 0/\1 1/g" > src/flags.h
-#define IS_DEBUG 0
+#define IS_DEBUG $IS_DEBUG
+#define IS_SLPQ 0
 
 #define IS_MULTIPLE_RUNQUEUE 0
 #define IS_ROUNDROBIN 0

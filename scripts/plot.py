@@ -6,6 +6,7 @@ import sys
 args = sys.argv
 if (len(args) != 6):
     print("usage: python3 scripts/plot.py WORKLOAD NCPU LOGSIZE FORK_NUM REPEAT_NUM")
+    exit(1)
 
 nprocs = ['100', '5000', '15000']
 policies = ['default', 'multiple']

@@ -25,7 +25,7 @@ def process_yaml_file(file_path, field, subfield):
 
 def main():
     args = sys.argv
-    if (len(args) != 8):
+    if (len(args) != 9):
         print("usage: python3 scripts/summarize.py WORKLOAD POLICY NCPU NPROC FORK_NUM LOGSIZE REPEAT_NUM")
         exit(1)
     workload = args[1]
@@ -35,19 +35,11 @@ def main():
     forknum = args[5]
     logsize = args[6]
     repeatnum = args[7]
+    workload_index = args[8]
 
-    if (workload == "IS_YIELD_REPEAT"):
-        workload = "yieldrepeat"
-    elif (workload == "IS_CALCULATION"):
-        workload = "calculation"
-    elif (workload == "IS_LARGEWRITE"):
-        workload = "largewrite"
+    # largewrite
+    if (workload_index == "1"):
         forknum = ''
-
-    if (policy == "IS_ROUNDROBIN"):
-        policy = "default"
-    else:
-        policy = "multiple"
 
     log_directory = "log/" + workload + "/" + policy + '_cpu' + ncpu + '_nproc' + nproc + '_fork' + forknum + '_logsize' + logsize
     output_file = log_directory + "/" + 'summary.yaml'

@@ -1,11 +1,11 @@
-import pandas as pd
-import numpy as np
 import os
 import sys
 import yaml
 import math
 import shutil
 import subprocess
+import numpy as np
+import pandas as pd
 from datetime import datetime
 
 # get args
@@ -25,6 +25,13 @@ workload_index = args[9]
 input_path = 'log/tmp.log'
 logfile_path = 'log/log.csv'
 logclock_path = 'log/clock.csv'
+output_name = "log/" + workload + "/" + policy \
+    + "_cpu" + str(NCPU) + "_nproc" + str(NPROC) + "_fork" \
+    + str(FORK_NUM) + "_logsize" + str(LOGSIZE) + "/"
+
+# largewrite
+if (workload_index == "1"):
+    FORK_NUM = ''
 
 # split inputfile to csv
 input_file = pd.read_csv(input_path)
@@ -46,36 +53,35 @@ df = df.query('pstate_prev == 4 or pstate_next == 4') \
     .loc[:,['clock', 'cpu', 'pid', 'pstate_prev', 'pstate_next']] \
     .astype('int')
 
-# get CPU usage
-start_clock = [-1] * NCPU
+INIT_NUM = -999
+prev_clock = [0] * NCPU
 cnt_running = cnt_not_running = sum_running = sum_not_running = 0
 running_clock = [0] * NCPU
 not_running_clock = [0] * NCPU
-cpu_start_clock = [-1] * NCPU
+cpu_start_clock = [INIT_NUM] * NCPU
 cpu_end_clock = [0] * NCPU
 
+# get CPU usage
 for line in df.itertuples(name=None, index=False):
-    clock = line[0]
-    cpuid = line[1]
+    clock, cpuid, pid, pstate_prev, pstate_next = line[:5]
+    lapsed_clock = clock - prev_clock[cpuid]
+    prev_clock[cpuid] = cpu_end_clock[cpuid] = clock
 
-    if (cpu_start_clock[cpuid] == -1):
+    if (cpu_start_clock[cpuid] == INIT_NUM):
         cpu_start_clock[cpuid] = clock
-    cpu_end_clock[cpuid] = clock
-
-    if (line[3] == 3 and line[4] == 4 and start_clock[cpuid] != -1):
-        not_running_clock[cpuid] += clock - start_clock[cpuid]
-        sum_not_running += clock - start_clock[cpuid]
+        continue
+    if (pstate_prev == 3 and pstate_next == 4):
+        not_running_clock[cpuid] += lapsed_clock
+        sum_not_running += lapsed_clock
         cnt_not_running += 1
-    elif (line[3] == 4 and line[4] == 3 and start_clock[cpuid] != -1):
-        running_clock[cpuid] += clock - start_clock[cpuid]
-        sum_running += clock - start_clock[cpuid]
+    elif (pstate_prev == 4 and pstate_next == 3):
+        running_clock[cpuid] += lapsed_clock
+        sum_running += lapsed_clock
         cnt_running += 1
-    start_clock[cpuid] = clock
-
-output_name = "log/" + workload + "/" + policy \
-    + "_cpu" + str(NCPU) + "_nproc" + str(NPROC) + "_fork" \
-    + str(FORK_NUM) + "_logsize" + str(LOGSIZE) + "/"
-
+        # print("pid: " + str(pid) + " lapsed clock " + str(lapsed_clock))
+    else:
+        print("invalid pstate")
+        exit(1)
 
 SIZE = 100
 clock_start = [-1] * SIZE
@@ -125,7 +131,7 @@ for indicator_name in eval_indicators:
     if (indicator_name == "cpu_usage"):
         for i in range(NCPU):
             if running_clock[i] != 0:
-                cpu = 100 * running_clock[i] / (cpu_end_clock[i] - cpu_start_clock[i])
+                cpu = running_clock[i] / (cpu_end_clock[i] - cpu_start_clock[i]) * 100
                 list_tmp.append(cpu)
                 dict_tmp["_data_pid" + "{:0=2}".format(i)] = cpu
 
@@ -138,10 +144,10 @@ for indicator_name in eval_indicators:
 
     elif (indicator_name == "runtime"):
         for i in range(NCPU):
-            if cpu_clock_sum[i] != 0:
-                runtime_per_cpu = cpu_clock_sum[i] / sum(cpu_clock_sum) * 100
-                list_tmp.append(runtime_per_cpu)
-                dict_tmp["_data_pid" + "{:0=2}".format(i)] = runtime_per_cpu
+            # if cpu_clock_sum[i] != 0:
+            runtime_per_cpu = cpu_clock_sum[i] / sum(cpu_clock_sum) * 100
+            list_tmp.append(runtime_per_cpu)
+            dict_tmp["_data_pid" + "{:0=2}".format(i)] = runtime_per_cpu
 
     elif (indicator_name == "time_response"):
         for line in df_clock.itertuples(name=None, index=False):

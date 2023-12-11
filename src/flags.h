@@ -1,4 +1,5 @@
 #define IS_DEBUG 0
+#define IS_SLPQ 0
 
 #define IS_MULTIPLE_RUNQUEUE 0
 #define IS_ROUNDROBIN 1
