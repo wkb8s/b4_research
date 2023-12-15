@@ -4,8 +4,8 @@
 #define IS_MULTIPLE_RUNQUEUE 0
 #define IS_ROUNDROBIN 1
 
-#define IS_YIELD_REPEAT 1
-#define IS_CALCULATION 0
+#define IS_YIELD_REPEAT 0
+#define IS_CALCULATION 1
 #define IS_LARGEWRITE 0
 
 #define FORK_NUM 32

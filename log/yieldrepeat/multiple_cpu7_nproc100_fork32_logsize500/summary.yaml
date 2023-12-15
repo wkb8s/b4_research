@@ -1,24 +1,24 @@
 balancing:
-  average: 0.389164238538415
+  average: 0.6989509551499911
   size: 1
   std: 0
 counters:
-  average: 40689.0
+  average: 41036.0
   size: 1
   std: 0
 cpu_usage:
-  average: 43.956324915029356
+  average: 40.16533171802273
   size: 1
   std: 0
 runtime:
-  average: 0.5348754619021798
+  average: 0.4792227528177043
   size: 1
   std: 0
 time_response:
-  average: 5889531.294117647
+  average: 5601795.764705882
   size: 1
   std: 0
 time_turnaround:
-  average: 806868180.7058823
+  average: 800456838.5882353
   size: 1
   std: 0

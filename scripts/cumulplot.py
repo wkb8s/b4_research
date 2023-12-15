@@ -78,13 +78,13 @@ for ep in df.itertuples(name=None, index=False):
             y[i].append(clock_sum_below / clock_total * 100)
 
 for i in range(NPROC):
-    if (i <= 3):
+    if (i <= 4):
         continue
     plt.plot(x[i], y[i], color = colors[i % len(colors)], label=str(i))
 
-plt.legend()
+plt.legend(loc='center left', bbox_to_anchor=(1., .5), ncol=2, title="pid")
 plt.xlabel("elapsed clock", fontsize=11)
-plt.ylabel("rate", fontsize=11)
+plt.ylabel("utilization rate", fontsize=11)
 plt.grid()
 plt.show()
-plt.savefig(savepath + "cumulplot.png")
+plt.savefig(savepath + "cumulplot.png", bbox_inches="tight")

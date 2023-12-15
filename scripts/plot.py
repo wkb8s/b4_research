@@ -33,7 +33,8 @@ for i in range(len(category)):
     for policy in policies:
         values = []
         for nproc in nprocs:
-            with open('log/' + workload + '/' + policy + '_cpu' + ncpu + '_nproc' + nproc + '_fork' + forknum + '_logsize' + logsize + '/' + 'summary.yaml') as file:
+            with open('log/' + workload + '/' + policy + '_cpu' + ncpu + '_nproc' + nproc + \
+                      '_fork' + forknum + '_logsize' + logsize + '/' + 'summary.yaml') as file:
                 obj = yaml.safe_load(file)
                 values.append(obj[category[i]]["average"])
         y[policy] = values
@@ -42,9 +43,9 @@ for i in range(len(category)):
     ax.set_xlabel('size of ptable')
     ax.set_ylabel(ytitle[i])
 
-    plt.bar(x1, y["default"], color='b', width=0.25, label='round robin', align="center")
-    plt.bar(x2, y["multiple"], color='g', width=0.25, label='multiple runqueue', align="center")
-    plt.legend(loc=2)
+    plt.bar(x1, y["default"], color='#BF616A', width=0.25, label='round robin', align="center")
+    plt.bar(x2, y["multiple"], color='#5E81AC', width=0.25, label='multiple runqueue', align="center")
+    plt.legend(loc='center left', bbox_to_anchor=(1., .5), title="scheduling policy")
 
     plt.xticks([1.15, 2.15, 3.15], nprocs)
-    plt.savefig("fig/" + workload + "/" + category[i] + ".png")
+    plt.savefig("fig/" + workload + "/" + category[i] + ".png", bbox_inches="tight")

@@ -577,15 +577,16 @@ int wait(void) {
   }
 }
 
-// has something wrong
+// * has something wrong
 struct proc *worksteal(struct runqueue *cur_rq) {
   struct runqueue *target = NULL;
+  struct proc *ret        = NULL;
   int maxsize             = 0;
 
   // seek target
   for (int i = 0; i < NCPU; i++) {
     struct runqueue *rq = &runqueue[i];
-    int size            = rq->size;
+    int size            = rq->size; // rq->size is not atomic
     if (size > maxsize && rq != cur_rq) {
       target  = rq;
       maxsize = size;
@@ -601,12 +602,12 @@ struct proc *worksteal(struct runqueue *cur_rq) {
   // target may be vanished by execution or stealing
   acquire(&target->lock);
   if (target->size > 0) {
-    struct proc *ret = dequeue(target);
+    ret = dequeue(target);
 
     /* if (ret->state != RUNNABLE) */
     /*   panic("worksteal: invalid proc state"); */
-    if (ret == NULL)
-      panic("worksteal: ret is NULL");
+    /* if (ret == NULL) */
+    /*   panic("worksteal: ret is NULL"); */
 
     /* for (int i = 0; i < ncpu; i++) { */
     /*   struct cpu *c = &cpus[i]; */
@@ -618,12 +619,12 @@ struct proc *worksteal(struct runqueue *cur_rq) {
     /*   } */
     /* } */
 
-    release(&target->lock);
+    /* release(&target->lock); */
     steal_num++;
-    return ret;
+    /* return ret; */
   }
   release(&target->lock);
-  return NULL;
+  return ret;
 }
 
 // PAGEBREAK: 42
@@ -674,11 +675,12 @@ void scheduler(void) {
       is_first_running[p->pid] = 0;
     }
 
-    context_switch_num++;
     acquire(&ptable.lock);
+    writelog(p->pid, TICK, RUNNABLE, RUNNING);
     p->state = RUNNING;
     swtch(&(c->scheduler), p->context);
-    c->proc = 0; // temporary placed
+    context_switch_num++;
+    c->proc = 0; // makeshift solution
     release(&ptable.lock);
     switchkvm();
     // c->proc = 0; // true place
@@ -703,9 +705,10 @@ void scheduler(void) {
         is_first_running[p->pid] = 0;
       }
 
+      writelog(p->pid, TICK, RUNNABLE, RUNNING);
       p->state = RUNNING;
-      context_switch_num++;
       swtch(&(c->scheduler), p->context);
+      context_switch_num++;
       switchkvm();
       c->proc = 0; // no process is executed in current CPU
     }
@@ -750,6 +753,11 @@ void yield(void) {
   acquire(&ptable.lock);
   curproc->state = RUNNABLE;
 
+  // [???] average running clock decreases in multiple runqueue
+  /* volatile int x = 0; */
+  /* for (int i = 0; i < 10000; i++) */
+  /*   x++; */
+
   if (IS_MULTIPLE_RUNQUEUE) {
     /* for (int i = 0; i < ncpu; i++) { */
     /*   struct cpu *c = &cpus[i]; */
@@ -766,11 +774,12 @@ void yield(void) {
     release(&cur_rq->lock);
     /* acquire(&ptable.lock); */
   }
-
   sched();
   release(&ptable.lock);
   curproc = myproc();
-  writelog(curproc->pid, TICK, RUNNABLE, RUNNING);
+
+  // if placed here, response time increases
+  /* writelog(curproc->pid, TICK, RUNNABLE, RUNNING); */
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -839,7 +848,8 @@ void sleep(void *chan, struct spinlock *lk) {
     acquire(lk);
   }
 
-  writelog(myproc()->pid, TICK, RUNNABLE, RUNNING);
+  // if placed here, response time increases
+  /* writelog(myproc()->pid, TICK, RUNNABLE, RUNNING); */
 }
 
 // PAGEBREAK!
@@ -847,13 +857,12 @@ void sleep(void *chan, struct spinlock *lk) {
 //  The ptable lock must be held.
 static void wakeup1(void *chan) {
   struct proc *p;
-        struct runqueue *cur_rq = &runqueue[mycpuid()];
-
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if (p->state == SLEEPING && p->chan == chan) {
       writelog(p->pid, WAKEUP, p->state, RUNNABLE);
       p->state = RUNNABLE;
       if (IS_MULTIPLE_RUNQUEUE) {
+        struct runqueue *cur_rq = &runqueue[mycpuid()];
         acquire(&cur_rq->lock);
         enqueue(cur_rq, p);
         release(&cur_rq->lock);

@@ -111,6 +111,7 @@ void trap(struct trapframe *tf) {
       tf->trapno == T_IRQ0 + IRQ_TIMER) {
     /* writelog(myproc()->pid, YIELD, myproc()->state, RUNNABLE); */
     yield();
+    /* cprintf("timeslice was consumed!\n"); */
     /* writelog(myproc()->pid, TICK, RUNNABLE, RUNNING); */
   }
 

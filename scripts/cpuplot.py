@@ -86,7 +86,7 @@ for ep in df.itertuples(name=None, index=False):
         labels.append(pid)
 
 # let legend visible
-leg = ax.legend(title="pid", title_fontsize=11, loc='upper left', bbox_to_anchor=(1, 1))
+leg = ax.legend(title="pid", loc='center left', bbox_to_anchor=(1., .5), ncols=2)
 for leha in leg.legend_handles:
     leha.set_alpha(1.0)
 
@@ -105,6 +105,6 @@ plt.gca() \
 plt.xlabel("elapsed clock", fontsize=11)
 plt.ylabel("CPU number", fontsize=11)
 plt.grid()
-# plt.xlim(0,1.4e8)
+# plt.xlim(0,1.4e7)
 plt.show()
-plt.savefig(savepath + "cpuplot.png")
+plt.savefig(savepath + "cpuplot.png", bbox_inches="tight")

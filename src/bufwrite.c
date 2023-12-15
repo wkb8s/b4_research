@@ -9,38 +9,12 @@
 char buf[8192];
 int stdout = 1;
 
-void forktest(void) {
-  int n, pid;
-
-  printf(1, "fork test\n");
-
-  for (n = 0; n < FORK_NUM; n++) {
-    pid = fork();
-    if (pid < 0)
-      break;
-    if (pid == 0)
-      exit();
-  }
-
-  if (n == FORK_NUM) {
-    printf(1, "fork claimed to work N times!\n", FORK_NUM);
-    exit();
-  }
-
-  for (; n > 0; n--) {
-    if (wait() < 0) {
-      printf(1, "wait stopped early\n");
-      exit();
-    }
-  }
-
-  if (wait() != -1) {
-    printf(1, "wait got too many\n");
-    exit();
-  }
-
-  printf(1, "fork test OK\n");
+void calculation() {
+  volatile int x = 0;
+  for (int i = 0; i < CALC_LOOP; i++)
+    x++;
 }
+
 void smallwrite(void) {
   int fd;
   int i;
@@ -142,12 +116,6 @@ void largewrite(void) {
   printf(stdout, "big files ok\n");
 }
 
-void calculation() {
-  volatile int x = 0;
-  for (int i = 0; i < CALC_LOOP; i++)
-    x++;
-}
-
 void calc_write_mix() {
   int pid, pi;
 
@@ -183,28 +151,6 @@ void calc_write_mix() {
   }
 }
 
-void fork_write() {
-  int pid, pi;
-
-  for (pi = 0; pi < FORK_NUM; pi++) {
-    pid = fork();
-    if (pid < 0) {
-      printf(1, "fork failed\n");
-      exit();
-    }
-
-    // child
-    if (pid == 0) {
-      largewrite();
-      exit();
-    }
-  }
-
-  // parent wait child
-  for (pi = 0; pi < FORK_NUM; pi++)
-    wait();
-}
-
 void fork_calc() {
   int pid, pi;
 
@@ -236,7 +182,6 @@ void yieldrepeat(void) {
     if (fork() == 0) {
       // wait until all processes are forked
       waitfork();
-
       /* calculation(); */
       for (int j = 0; j < 500; j++) {
         bufwrite(); // need include yield() in sys_bufwrite()
@@ -250,9 +195,29 @@ void yieldrepeat(void) {
   }
 }
 
+void writerepeat(void) {
+  for (int i = 0; i < FORK_NUM; i++) {
+    // if child
+    if (fork() == 0) {
+      // wait until all processes are forked
+      waitfork();
+      for (int j = 0; j < 5; j++) {
+        smallwrite();
+      }
+      exit(); // don't forget
+    }
+  }
+
+  for (int i = 0; i < FORK_NUM; i++) {
+    wait();
+  }
+}
+
 int main(int argc, char *argv[]) {
-  if (IS_YIELD_REPEAT)
+  if (IS_YIELD_REPEAT) {
+    /* writerepeat(); */
     yieldrepeat();
+  }
 
   if (IS_CALCULATION)
     fork_calc();

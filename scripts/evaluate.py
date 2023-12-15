@@ -6,7 +6,11 @@ import shutil
 import subprocess
 import numpy as np
 import pandas as pd
+from enum import Enum
 from datetime import datetime
+
+RUNNABLE = 3
+RUNNING = 4
 
 # get args
 args = sys.argv
@@ -70,18 +74,15 @@ for line in df.itertuples(name=None, index=False):
     if (cpu_start_clock[cpuid] == INIT_NUM):
         cpu_start_clock[cpuid] = clock
         continue
-    if (pstate_prev == 3 and pstate_next == 4):
+    if (pstate_prev == RUNNABLE and pstate_next == RUNNING):
         not_running_clock[cpuid] += lapsed_clock
         sum_not_running += lapsed_clock
         cnt_not_running += 1
-    elif (pstate_prev == 4 and pstate_next == 3):
+    elif (pstate_prev == RUNNING):
         running_clock[cpuid] += lapsed_clock
         sum_running += lapsed_clock
         cnt_running += 1
         # print("pid: " + str(pid) + " lapsed clock " + str(lapsed_clock))
-    else:
-        print("invalid pstate")
-        exit(1)
 
 SIZE = 100
 clock_start = [-1] * SIZE
@@ -140,7 +141,9 @@ for indicator_name in eval_indicators:
             # skip unforked or unexited process
             if (line[3] == 0):
                 continue;
-            list_tmp.append(line[3] - line[1])
+            time = line[3] - line[1]
+            list_tmp.append(time)
+            dict_tmp["_data_pid" + "{:0=2}".format(int(line[0]))] = time
 
     elif (indicator_name == "runtime"):
         for i in range(NCPU):
@@ -154,7 +157,9 @@ for indicator_name in eval_indicators:
             # skip unforked or unexited process
             if (line[3] == 0):
                 continue;
-            list_tmp.append(line[2] - line[1])
+            time = line[2] - line[1]
+            list_tmp.append(time)
+            dict_tmp["_data_pid" + "{:0=2}".format(int(line[0]))] = time
 
     elif (indicator_name == "balancing"):
         for i in range(SIZE):
