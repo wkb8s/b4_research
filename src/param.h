@@ -1,4 +1,4 @@
-#define NPROC 100
+#define NPROC 15000
 #define KSTACKSIZE 4096
 #define NCPU 7
 #define NOFILE 16
